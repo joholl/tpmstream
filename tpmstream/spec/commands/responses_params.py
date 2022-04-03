@@ -1,0 +1,772 @@
+from ..common.values import tpm_dataclass
+from ..structures.algorithem_parameters_and_structures import (
+    TPM2B_ECC_POINT,
+    TPM2B_ENCRYPTED_SECRET,
+    TPM2B_PUBLIC_KEY_RSA,
+    TPM2B_SENSITIVE_DATA,
+    TPMS_ALGORITHM_DETAIL_ECC,
+    TPMT_SIGNATURE,
+)
+from ..structures.base_types import UINT16, UINT32
+from ..structures.constants import TPM_CC, TPM_RC
+from ..structures.context_data import TPMS_CONTEXT
+from ..structures.creation_data import TPM2B_CREATION_DATA
+from ..structures.interface_types import TPMI_YES_NO
+from ..structures.key_object_complex import TPM2B_ID_OBJECT, TPM2B_PRIVATE, TPM2B_PUBLIC
+from ..structures.nv_storage_structures import TPM2B_NV_PUBLIC
+from ..structures.structures import (
+    TPM2B_ATTEST,
+    TPM2B_DATA,
+    TPM2B_DIGEST,
+    TPM2B_IV,
+    TPM2B_MAX_BUFFER,
+    TPM2B_MAX_NV_BUFFER,
+    TPM2B_NAME,
+    TPM2B_NONCE,
+    TPM2B_TIMEOUT,
+    TPML_ALG,
+    TPML_DIGEST,
+    TPML_DIGEST_VALUES,
+    TPML_PCR_SELECTION,
+    TPMS_CAPABILITY_DATA,
+    TPMS_TIME_INFO,
+    TPMT_HA,
+    TPMT_TK_AUTH,
+    TPMT_TK_CREATION,
+    TPMT_TK_HASHCHECK,
+    TPMT_TK_VERIFIED,
+)
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_UNDEFINE_SPACE_SPECIAL:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_EVICT_CONTROL:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_HIERARCHY_CONTROL:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_UNDEFINE_SPACE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CHANGE_EPS:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CHANGE_PPS:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CLEAR:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CLEAR_CONTROL:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CLOCK_SET:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_HIERARCHY_CHANGE_AUTH:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_DEFINE_SPACE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PCR_ALLOCATE:
+    allocationSuccess: TPMI_YES_NO
+    maxPCR: UINT32
+    sizeNeeded: UINT32
+    sizeAvailable: UINT32
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PCR_SET_AUTH_POLICY:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PP_COMMANDS:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SET_PRIMARY_POLICY:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_FIELD_UPGRADE_START:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CLOCK_RATE_ADJUST:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CREATE_PRIMARY:
+    outPublic: TPM2B_PUBLIC
+    creationData: TPM2B_CREATION_DATA
+    creationHash: TPM2B_DIGEST
+    creationTicket: TPMT_TK_CREATION
+    name: TPM2B_NAME
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_GLOBAL_WRITE_LOCK:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_GET_COMMAND_AUDIT_DIGEST:
+    auditInfo: TPM2B_ATTEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_INCREMENT:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_SET_BITS:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_EXTEND:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_WRITE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_WRITE_LOCK:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_DICTIONARY_ATTACK_LOCK_RESET:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_DICTIONARY_ATTACK_PARAMETERS:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_CHANGE_AUTH:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PCR_EVENT:
+    digests: TPML_DIGEST_VALUES
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PCR_RESET:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SEQUENCE_COMPLETE:
+    result: TPM2B_DIGEST
+    validation: TPMT_TK_HASHCHECK
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SET_ALGORITHM_SET:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SET_COMMAND_CODE_AUDIT_STATUS:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_FIELD_UPGRADE_DATA:
+    nextDigest: TPMT_HA.plus()
+    firstDigest: TPMT_HA
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_INCREMENTAL_SELF_TEST:
+    toDoList: TPML_ALG
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SELF_TEST:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_STARTUP:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SHUTDOWN:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_STIR_RANDOM:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_ACTIVATE_CREDENTIAL:
+    certInfo: TPM2B_DIGEST
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CERTIFY:
+    certifyInfo: TPM2B_ATTEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_NV:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CERTIFY_CREATION:
+    certifyInfo: TPM2B_ATTEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_DUPLICATE:
+    encryptionKeyOut: TPM2B_DATA
+    duplicate: TPM2B_PRIVATE
+    outSymSeed: TPM2B_ENCRYPTED_SECRET
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_GET_TIME:
+    timeInfo: TPM2B_ATTEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_GET_SESSION_AUDIT_DIGEST:
+    auditInfo: TPM2B_ATTEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_READ:
+    data: TPM2B_MAX_NV_BUFFER
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_READ_LOCK:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_OBJECT_CHANGE_AUTH:
+    outPrivate: TPM2B_PRIVATE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_SECRET:
+    timeout: TPM2B_TIMEOUT
+    policyTicket: TPMT_TK_AUTH
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_REWRAP:
+    outDuplicate: TPM2B_PRIVATE
+    outSymSeed: TPM2B_ENCRYPTED_SECRET
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CREATE:
+    outPrivate: TPM2B_PRIVATE
+    outPublic: TPM2B_PUBLIC
+    creationData: TPM2B_CREATION_DATA
+    creationHash: TPM2B_DIGEST
+    creationTicket: TPMT_TK_CREATION
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_ECDH_Z_GEN:
+    outPoint: TPM2B_ECC_POINT
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_HMAC:
+    outHMAC: TPM2B_DIGEST
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_IMPORT:
+    outPrivate: TPM2B_PRIVATE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_LOAD:
+    name: TPM2B_NAME
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_QUOTE:
+    quoted: TPM2B_ATTEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_RSA_DECRYPT:
+    message: TPM2B_PUBLIC_KEY_RSA
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_HMAC_START:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SEQUENCE_UPDATE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_SIGN:
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_UNSEAL:
+    outData: TPM2B_SENSITIVE_DATA
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_SIGNED:
+    timeout: TPM2B_TIMEOUT
+    policyTicket: TPMT_TK_AUTH
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CONTEXT_LOAD:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CONTEXT_SAVE:
+    context: TPMS_CONTEXT
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_ECDH_KEY_GEN:
+    zPoint: TPM2B_ECC_POINT
+    pubPoint: TPM2B_ECC_POINT
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_ENCRYPT_DECRYPT:
+    outData: TPM2B_MAX_BUFFER
+    ivOut: TPM2B_IV
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_FLUSH_CONTEXT:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_LOAD_EXTERNAL:
+    name: TPM2B_NAME
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_MAKE_CREDENTIAL:
+    credentialBlob: TPM2B_ID_OBJECT
+    secret: TPM2B_ENCRYPTED_SECRET
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_READ_PUBLIC:
+    nvPublic: TPM2B_NV_PUBLIC
+    nvName: TPM2B_NAME
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_AUTHORIZE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_AUTH_VALUE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_COMMAND_CODE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_COUNTER_TIMER:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_CP_HASH:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_LOCALITY:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_NAME_HASH:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_OR:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_TICKET:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_READ_PUBLIC:
+    outPublic: TPM2B_PUBLIC
+    name: TPM2B_NAME
+    qualifiedName: TPM2B_NAME
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_RSA_ENCRYPT:
+    outData: TPM2B_PUBLIC_KEY_RSA
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_START_AUTH_SESSION:
+    nonceTPM: TPM2B_NONCE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_VERIFY_SIGNATURE:
+    validation: TPMT_TK_VERIFIED
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_ECC_PARAMETERS:
+    parameters: TPMS_ALGORITHM_DETAIL_ECC
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_FIRMWARE_READ:
+    sequenceNumber: UINT32
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_GET_CAPABILITY:
+    moreData: TPMI_YES_NO
+    capabilityData: TPMS_CAPABILITY_DATA
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_GET_RANDOM:
+    randomBytes: TPM2B_DIGEST
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_GET_TEST_RESULT:
+    outData: TPM2B_MAX_BUFFER
+    testResult: TPM_RC
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_HASH:
+    outHash: TPM2B_DIGEST
+    validation: TPMT_TK_HASHCHECK
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PCR_READ:
+    pcrUpdateCounter: UINT32
+    pcrSelectionOut: TPML_PCR_SELECTION
+    pcrValues: TPML_DIGEST
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_PCR:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_RESTART:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_READ_CLOCK:
+    currentTime: TPMS_TIME_INFO
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PCR_EXTEND:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_PCR_SET_AUTH_VALUE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_NV_CERTIFY:
+    certifyInfo: TPM2B_ATTEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_EVENT_SEQUENCE_COMPLETE:
+    results: TPML_DIGEST_VALUES
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_HASH_SEQUENCE_START:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_PHYSICAL_PRESENCE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_DUPLICATION_SELECT:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_GET_DIGEST:
+    policyDigest: TPM2B_DIGEST
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_TEST_PARMS:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_COMMIT:
+    K: TPM2B_ECC_POINT
+    L: TPM2B_ECC_POINT
+    E: TPM2B_ECC_POINT
+    counter: UINT16
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_PASSWORD:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_Z_GEN_2_PHASE:
+    outZ1: TPM2B_ECC_POINT
+    outZ2: TPM2B_ECC_POINT
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_EC_EPHEMERAL:
+    Q: TPM2B_ECC_POINT
+    counter: UINT16
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_NV_WRITTEN:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_TEMPLATE:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CREATE_LOADED:
+    outPrivate: TPM2B_PRIVATE
+    outPublic: TPM2B_PUBLIC
+    name: TPM2B_NAME
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_AUTHORIZE_NV:
+    pass
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_ENCRYPT_DECRYPT2:
+    outData: TPM2B_MAX_BUFFER
+    ivOut: TPM2B_IV
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_CERTIFY_X509:
+    addedToCertificate: TPM2B_MAX_BUFFER
+    tbsDigest: TPM2B_DIGEST
+    signature: TPMT_SIGNATURE
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_ACT_SET_TIMEOUT:
+    pass
+
+
+response_param_types = {
+    TPM_CC.NV_UndefineSpaceSpecial: TPMS_RESPONSE_PARAMS_NV_UNDEFINE_SPACE_SPECIAL,
+    TPM_CC.EvictControl: TPMS_RESPONSE_PARAMS_EVICT_CONTROL,
+    TPM_CC.HierarchyControl: TPMS_RESPONSE_PARAMS_HIERARCHY_CONTROL,
+    TPM_CC.NV_UndefineSpace: TPMS_RESPONSE_PARAMS_NV_UNDEFINE_SPACE,
+    TPM_CC.ChangeEPS: TPMS_RESPONSE_PARAMS_CHANGE_EPS,
+    TPM_CC.ChangePPS: TPMS_RESPONSE_PARAMS_CHANGE_PPS,
+    TPM_CC.Clear: TPMS_RESPONSE_PARAMS_CLEAR,
+    TPM_CC.ClearControl: TPMS_RESPONSE_PARAMS_CLEAR_CONTROL,
+    TPM_CC.ClockSet: TPMS_RESPONSE_PARAMS_CLOCK_SET,
+    TPM_CC.HierarchyChangeAuth: TPMS_RESPONSE_PARAMS_HIERARCHY_CHANGE_AUTH,
+    TPM_CC.NV_DefineSpace: TPMS_RESPONSE_PARAMS_NV_DEFINE_SPACE,
+    TPM_CC.PCR_Allocate: TPMS_RESPONSE_PARAMS_PCR_ALLOCATE,
+    TPM_CC.PCR_SetAuthPolicy: TPMS_RESPONSE_PARAMS_PCR_SET_AUTH_POLICY,
+    TPM_CC.PP_Commands: TPMS_RESPONSE_PARAMS_PP_COMMANDS,
+    TPM_CC.SetPrimaryPolicy: TPMS_RESPONSE_PARAMS_SET_PRIMARY_POLICY,
+    TPM_CC.FieldUpgradeStart: TPMS_RESPONSE_PARAMS_FIELD_UPGRADE_START,
+    TPM_CC.ClockRateAdjust: TPMS_RESPONSE_PARAMS_CLOCK_RATE_ADJUST,
+    TPM_CC.CreatePrimary: TPMS_RESPONSE_PARAMS_CREATE_PRIMARY,
+    TPM_CC.NV_GlobalWriteLock: TPMS_RESPONSE_PARAMS_NV_GLOBAL_WRITE_LOCK,
+    TPM_CC.GetCommandAuditDigest: TPMS_RESPONSE_PARAMS_GET_COMMAND_AUDIT_DIGEST,
+    TPM_CC.NV_Increment: TPMS_RESPONSE_PARAMS_NV_INCREMENT,
+    TPM_CC.NV_SetBits: TPMS_RESPONSE_PARAMS_NV_SET_BITS,
+    TPM_CC.NV_Extend: TPMS_RESPONSE_PARAMS_NV_EXTEND,
+    TPM_CC.NV_Write: TPMS_RESPONSE_PARAMS_NV_WRITE,
+    TPM_CC.NV_WriteLock: TPMS_RESPONSE_PARAMS_NV_WRITE_LOCK,
+    TPM_CC.DictionaryAttackLockReset: TPMS_RESPONSE_PARAMS_DICTIONARY_ATTACK_LOCK_RESET,
+    TPM_CC.DictionaryAttackParameters: TPMS_RESPONSE_PARAMS_DICTIONARY_ATTACK_PARAMETERS,
+    TPM_CC.NV_ChangeAuth: TPMS_RESPONSE_PARAMS_NV_CHANGE_AUTH,
+    TPM_CC.PCR_Event: TPMS_RESPONSE_PARAMS_PCR_EVENT,
+    TPM_CC.PCR_Reset: TPMS_RESPONSE_PARAMS_PCR_RESET,
+    TPM_CC.SequenceComplete: TPMS_RESPONSE_PARAMS_SEQUENCE_COMPLETE,
+    TPM_CC.SetAlgorithmSet: TPMS_RESPONSE_PARAMS_SET_ALGORITHM_SET,
+    TPM_CC.SetCommandCodeAuditStatus: TPMS_RESPONSE_PARAMS_SET_COMMAND_CODE_AUDIT_STATUS,
+    TPM_CC.FieldUpgradeData: TPMS_RESPONSE_PARAMS_FIELD_UPGRADE_DATA,
+    TPM_CC.IncrementalSelfTest: TPMS_RESPONSE_PARAMS_INCREMENTAL_SELF_TEST,
+    TPM_CC.SelfTest: TPMS_RESPONSE_PARAMS_SELF_TEST,
+    TPM_CC.Startup: TPMS_RESPONSE_PARAMS_STARTUP,
+    TPM_CC.Shutdown: TPMS_RESPONSE_PARAMS_SHUTDOWN,
+    TPM_CC.StirRandom: TPMS_RESPONSE_PARAMS_STIR_RANDOM,
+    TPM_CC.ActivateCredential: TPMS_RESPONSE_PARAMS_ACTIVATE_CREDENTIAL,
+    TPM_CC.Certify: TPMS_RESPONSE_PARAMS_CERTIFY,
+    TPM_CC.PolicyNV: TPMS_RESPONSE_PARAMS_POLICY_NV,
+    TPM_CC.CertifyCreation: TPMS_RESPONSE_PARAMS_CERTIFY_CREATION,
+    TPM_CC.Duplicate: TPMS_RESPONSE_PARAMS_DUPLICATE,
+    TPM_CC.GetTime: TPMS_RESPONSE_PARAMS_GET_TIME,
+    TPM_CC.GetSessionAuditDigest: TPMS_RESPONSE_PARAMS_GET_SESSION_AUDIT_DIGEST,
+    TPM_CC.NV_Read: TPMS_RESPONSE_PARAMS_NV_READ,
+    TPM_CC.NV_ReadLock: TPMS_RESPONSE_PARAMS_NV_READ_LOCK,
+    TPM_CC.ObjectChangeAuth: TPMS_RESPONSE_PARAMS_OBJECT_CHANGE_AUTH,
+    TPM_CC.PolicySecret: TPMS_RESPONSE_PARAMS_POLICY_SECRET,
+    TPM_CC.Rewrap: TPMS_RESPONSE_PARAMS_REWRAP,
+    TPM_CC.Create: TPMS_RESPONSE_PARAMS_CREATE,
+    TPM_CC.ECDH_ZGen: TPMS_RESPONSE_PARAMS_ECDH_Z_GEN,
+    TPM_CC.HMAC: TPMS_RESPONSE_PARAMS_HMAC,
+    TPM_CC.Import: TPMS_RESPONSE_PARAMS_IMPORT,
+    TPM_CC.Load: TPMS_RESPONSE_PARAMS_LOAD,
+    TPM_CC.Quote: TPMS_RESPONSE_PARAMS_QUOTE,
+    TPM_CC.RSA_Decrypt: TPMS_RESPONSE_PARAMS_RSA_DECRYPT,
+    TPM_CC.HMAC_Start: TPMS_RESPONSE_PARAMS_HMAC_START,
+    TPM_CC.SequenceUpdate: TPMS_RESPONSE_PARAMS_SEQUENCE_UPDATE,
+    TPM_CC.Sign: TPMS_RESPONSE_PARAMS_SIGN,
+    TPM_CC.Unseal: TPMS_RESPONSE_PARAMS_UNSEAL,
+    TPM_CC.PolicySigned: TPMS_RESPONSE_PARAMS_POLICY_SIGNED,
+    TPM_CC.ContextLoad: TPMS_RESPONSE_PARAMS_CONTEXT_LOAD,
+    TPM_CC.ContextSave: TPMS_RESPONSE_PARAMS_CONTEXT_SAVE,
+    TPM_CC.ECDH_KeyGen: TPMS_RESPONSE_PARAMS_ECDH_KEY_GEN,
+    TPM_CC.EncryptDecrypt: TPMS_RESPONSE_PARAMS_ENCRYPT_DECRYPT,
+    TPM_CC.FlushContext: TPMS_RESPONSE_PARAMS_FLUSH_CONTEXT,
+    TPM_CC.LoadExternal: TPMS_RESPONSE_PARAMS_LOAD_EXTERNAL,
+    TPM_CC.MakeCredential: TPMS_RESPONSE_PARAMS_MAKE_CREDENTIAL,
+    TPM_CC.NV_ReadPublic: TPMS_RESPONSE_PARAMS_NV_READ_PUBLIC,
+    TPM_CC.PolicyAuthorize: TPMS_RESPONSE_PARAMS_POLICY_AUTHORIZE,
+    TPM_CC.PolicyAuthValue: TPMS_RESPONSE_PARAMS_POLICY_AUTH_VALUE,
+    TPM_CC.PolicyCommandCode: TPMS_RESPONSE_PARAMS_POLICY_COMMAND_CODE,
+    TPM_CC.PolicyCounterTimer: TPMS_RESPONSE_PARAMS_POLICY_COUNTER_TIMER,
+    TPM_CC.PolicyCpHash: TPMS_RESPONSE_PARAMS_POLICY_CP_HASH,
+    TPM_CC.PolicyLocality: TPMS_RESPONSE_PARAMS_POLICY_LOCALITY,
+    TPM_CC.PolicyNameHash: TPMS_RESPONSE_PARAMS_POLICY_NAME_HASH,
+    TPM_CC.PolicyOR: TPMS_RESPONSE_PARAMS_POLICY_OR,
+    TPM_CC.PolicyTicket: TPMS_RESPONSE_PARAMS_POLICY_TICKET,
+    TPM_CC.ReadPublic: TPMS_RESPONSE_PARAMS_READ_PUBLIC,
+    TPM_CC.RSA_Encrypt: TPMS_RESPONSE_PARAMS_RSA_ENCRYPT,
+    TPM_CC.StartAuthSession: TPMS_RESPONSE_PARAMS_START_AUTH_SESSION,
+    TPM_CC.VerifySignature: TPMS_RESPONSE_PARAMS_VERIFY_SIGNATURE,
+    TPM_CC.ECC_Parameters: TPMS_RESPONSE_PARAMS_ECC_PARAMETERS,
+    TPM_CC.FirmwareRead: TPMS_RESPONSE_PARAMS_FIRMWARE_READ,
+    TPM_CC.GetCapability: TPMS_RESPONSE_PARAMS_GET_CAPABILITY,
+    TPM_CC.GetRandom: TPMS_RESPONSE_PARAMS_GET_RANDOM,
+    TPM_CC.GetTestResult: TPMS_RESPONSE_PARAMS_GET_TEST_RESULT,
+    TPM_CC.Hash: TPMS_RESPONSE_PARAMS_HASH,
+    TPM_CC.PCR_Read: TPMS_RESPONSE_PARAMS_PCR_READ,
+    TPM_CC.PolicyPCR: TPMS_RESPONSE_PARAMS_POLICY_PCR,
+    TPM_CC.PolicyRestart: TPMS_RESPONSE_PARAMS_POLICY_RESTART,
+    TPM_CC.ReadClock: TPMS_RESPONSE_PARAMS_READ_CLOCK,
+    TPM_CC.PCR_Extend: TPMS_RESPONSE_PARAMS_PCR_EXTEND,
+    TPM_CC.PCR_SetAuthValue: TPMS_RESPONSE_PARAMS_PCR_SET_AUTH_VALUE,
+    TPM_CC.NV_Certify: TPMS_RESPONSE_PARAMS_NV_CERTIFY,
+    TPM_CC.EventSequenceComplete: TPMS_RESPONSE_PARAMS_EVENT_SEQUENCE_COMPLETE,
+    TPM_CC.HashSequenceStart: TPMS_RESPONSE_PARAMS_HASH_SEQUENCE_START,
+    TPM_CC.PolicyPhysicalPresence: TPMS_RESPONSE_PARAMS_POLICY_PHYSICAL_PRESENCE,
+    TPM_CC.PolicyDuplicationSelect: TPMS_RESPONSE_PARAMS_POLICY_DUPLICATION_SELECT,
+    TPM_CC.PolicyGetDigest: TPMS_RESPONSE_PARAMS_POLICY_GET_DIGEST,
+    TPM_CC.TestParms: TPMS_RESPONSE_PARAMS_TEST_PARMS,
+    TPM_CC.Commit: TPMS_RESPONSE_PARAMS_COMMIT,
+    TPM_CC.PolicyPassword: TPMS_RESPONSE_PARAMS_POLICY_PASSWORD,
+    TPM_CC.ZGen_2Phase: TPMS_RESPONSE_PARAMS_Z_GEN_2_PHASE,
+    TPM_CC.EC_Ephemeral: TPMS_RESPONSE_PARAMS_EC_EPHEMERAL,
+    TPM_CC.PolicyNvWritten: TPMS_RESPONSE_PARAMS_POLICY_NV_WRITTEN,
+    TPM_CC.PolicyTemplate: TPMS_RESPONSE_PARAMS_POLICY_TEMPLATE,
+    TPM_CC.CreateLoaded: TPMS_RESPONSE_PARAMS_CREATE_LOADED,
+    TPM_CC.PolicyAuthorizeNV: TPMS_RESPONSE_PARAMS_POLICY_AUTHORIZE_NV,
+    TPM_CC.EncryptDecrypt2: TPMS_RESPONSE_PARAMS_ENCRYPT_DECRYPT2,
+    TPM_CC.CertifyX509: TPMS_RESPONSE_PARAMS_CERTIFY_X509,
+    TPM_CC.ACT_SetTimeout: TPMS_RESPONSE_PARAMS_ACT_SET_TIMEOUT,
+}
