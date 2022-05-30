@@ -47,14 +47,14 @@ done
 check_black=""
 check_isort=""
 if [ "${CHECK}" = true ]; then
-    check_autoflake="--diff --check"
+    check_autoflake="--check"
     check_black="--diff --check"
     check_isort="--diff --check-only"
 fi
 
 case "${LINTERS}" in
     *"autoflafke"*)
-    python -m autoflake --in-place --remove-all-unused-imports ${DIR}/**/*.py
+    python -m autoflake --in-place --remove-all-unused-imports ${check_autoflake} ${DIR}/**/*.py
     ;;
 esac
 

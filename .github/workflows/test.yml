@@ -54,4 +54,4 @@ jobs:
         #if: steps.cache-virtualenv.outputs.cache-hit != 'true'
 
       - name: Linting
-        run: scripts/linters.sh
+        run: scripts/linters.sh --check
