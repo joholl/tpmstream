@@ -23,7 +23,7 @@ jobs:
 
         # the package installation will only be executed when the
         # requirements-files have changed.
-      - run: pip install -r requirements.txt; pip install pytest autoflake black isort
+      - run: pip install .; pip install pytest autoflake black isort
         #if: steps.cache-virtualenv.outputs.cache-hit != 'true'
 
       - name: Test
@@ -50,7 +50,7 @@ jobs:
 
         # the package installation will only be executed when the
         # requirements-files have changed.
-      - run: pip install -r requirements.txt; pip install pytest autoflake black isort
+      - run: pip install .; pip install pytest autoflake black isort
         #if: steps.cache-virtualenv.outputs.cache-hit != 'true'
 
       - name: Linting

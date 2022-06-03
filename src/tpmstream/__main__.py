@@ -8,6 +8,7 @@ from difflib import get_close_matches
 from tpmstream.common.event import events_to_objs, obj_to_events
 from tpmstream.spec.structures.constants import TPM_CC
 
+from . import __version__
 from .io import bytes_from_file
 from .io.auto import Auto
 from .io.binary import Binary
@@ -119,9 +120,9 @@ def examples(args):
 
 
 parser = ArgumentParser(
-    prog=f"python -m {__package__}",
     description="Process TPM 2.0 commands and responses.",
 )
+parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 subparsers = parser.add_subparsers()
 subparsers.required = True
 
@@ -162,7 +163,12 @@ parser_example.set_defaults(func=examples)
 # TODO what about subparsers?
 # argcomplete(parser)
 
-if __name__ == "__main__":
+
+def main(argv=None):
     args = parser.parse_args()
     ret = args.func(args)
     sys.exit(ret)
+
+
+if __name__ == "__main__":
+    main()

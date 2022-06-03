@@ -6,12 +6,18 @@ A tool to help you understand TPM commands and responses. You can either use the
 `convert` command if you want to decode TPM commands/responses or the `example`
 command to find examples.
 
+## Install
+
+```pip install .```
+
+For development, it is recommended to use a virtual environment and install with the `--editable` switch.
+
 ## Decode TPM Commands/Responses:
 
 The `convert` command reads binary data from stdin:
 
 ```bash
-❯ printf "80020000007700000131400000010000003d0200000000145536c0a5ba338e58abfe729f76ccca61ebaf821f01002082fc712f21e4c7e47bbf84dfa0fb15ddfc7013eb61ed3eb2edaf0286e88ba20c000400000000001a0023000b0004007200000010001a000b00000003001000000000000000000000"  | xxd -r -p | python -m tpmstream convert
+❯ printf "80020000007700000131400000010000003d0200000000145536c0a5ba338e58abfe729f76ccca61ebaf821f01002082fc712f21e4c7e47bbf84dfa0fb15ddfc7013eb61ed3eb2edaf0286e88ba20c000400000000001a0023000b0004007200000010001a000b00000003001000000000000000000000"  | xxd -r -p | tpmstream convert
 ```
 
 Or you can read from a file (can be binary or pcapng):
@@ -23,18 +29,18 @@ Or you can read from a file (can be binary or pcapng):
 
 You want to see an exemplary TPM command? Easy, try:
 ```bash
-❯ python -m tpmstream ex NV_Write
+❯ tpmstream ex NV_Write
 ```
 
 Don't worry, the tool helps you out if you do not know how to spell a given command:
 
 ```bash
-❯ python -m tpmstream ex NVDefine
+❯ tpmstream ex NVDefine
 Unknown commandCode: NVDefine.
 
 Did you mean:
 
-  python -m tpmstream ex NV_DefineSpace
+  tpmstream ex NV_DefineSpace
 ```
 
 
