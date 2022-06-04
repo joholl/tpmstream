@@ -2,14 +2,14 @@ import binascii
 import glob
 import os
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, FileType
 from difflib import get_close_matches
 
 from tpmstream.common.event import events_to_objs, obj_to_events
 from tpmstream.spec.structures.constants import TPM_CC
 
 from . import __version__
-from .io import bytes_from_file
+from .io import bytes_from_files
 from .io.auto import Auto
 from .io.binary import Binary
 from .io.events import Events
@@ -41,11 +41,6 @@ def get_command_code(input):
 
 
 def convert(args):
-    if args.file:
-        paths = args.file
-    else:
-        paths = (None,)
-
     format_in = {
         "auto": Auto,
         "binary": Binary,
@@ -58,14 +53,13 @@ def convert(args):
         "pretty": Pretty,
     }[args.format_out]
 
-    for path in paths:
-        # binary to events to pretty
-        events = format_in.marshal(tpm_type=Command, buffer=bytes_from_file(path))
-        for line in format_out.unmarshal(events):
-            if isinstance(line, bytes):
-                print(" " + binascii.hexlify(line).decode(), end="")
-            else:
-                print(line)
+    # binary to events to pretty
+    events = format_in.marshal(tpm_type=Command, buffer=bytes_from_files(args.file))
+    for line in format_out.unmarshal(events):
+        if isinstance(line, bytes):
+            print(" " + binascii.hexlify(line).decode(), end="")
+        else:
+            print(line)
 
     return 0
 
@@ -104,7 +98,8 @@ def examples(args):
         raise AttributeError(f"Unknown commandCode: {args.command}") from e
 
     for path in paths:
-        events = list(Auto.marshal(tpm_type=Command, buffer=bytes_from_file(path)))
+        with open(path, "rb") as file:
+            events = list(Auto.marshal(tpm_type=Command, buffer=bytes_from_files(file)))
 
         # TODO Get Responses, too. Response objects should know they commandCode, maybe via ._commandCode?
         for cmd_or_rsp in events_to_objs(events):
@@ -148,7 +143,7 @@ parser_convert = subparsers.add_parser(
     description="convert data stream to another format",
 )
 parser_convert.add_argument(
-    "file", type=str, nargs="*", help="input file(s) to be parsed"
+    "file", type=FileType("rb"), nargs="+", help="input file(s) to be parsed"
 )
 parser_convert.add_argument("--in", **format_in_arg)
 parser_convert.add_argument("--out", **format_out_arg)

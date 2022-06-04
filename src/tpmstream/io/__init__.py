@@ -1,18 +1,14 @@
-import sys
+import io
 
 
-def bytes_from_file(path):
+def bytes_from_files(files):
     """Iterator. If path is None or empty, read from stdin."""
+    if isinstance(files, io.BufferedReader):
+        files = (files,)
 
-    def all_bytes(file):
+    for file in files:
         while True:
             buffer = file.read()
             if not buffer:
-                return
+                break
             yield from (byte for byte in buffer)
-
-    if path:
-        with open(path, "rb") as file:
-            yield from all_bytes(file)
-    else:
-        yield from all_bytes(sys.stdin.buffer)
