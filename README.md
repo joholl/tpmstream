@@ -14,16 +14,20 @@ For development, it is recommended to use a virtual environment and install with
 
 ## Decode TPM Commands/Responses:
 
-The `convert` command reads binary data from stdin:
+The `convert` command reads binary (or pcapng) data from a file:
 
 ```bash
-❯ printf "80020000007700000131400000010000003d0200000000145536c0a5ba338e58abfe729f76ccca61ebaf821f01002082fc712f21e4c7e47bbf84dfa0fb15ddfc7013eb61ed3eb2edaf0286e88ba20c000400000000001a0023000b0004007200000010001a000b00000003001000000000000000000000"  | xxd -r -p | tpmstream convert
+❯ tpmstream convert create_primary.bin
 ```
-
-Or you can read from a file (can be binary or pcapng):
 
 ![Example](doc/example.png?raw=true "Example Screenshot")
 
+
+Or you can read data from stdin. Just pass `-`:
+
+```bash
+❯ printf "80020000007700000131400000010000003d0200000000145536c0a5ba338e58abfe729f76ccca61ebaf821f01002082fc712f21e4c7e47bbf84dfa0fb15ddfc7013eb61ed3eb2edaf0286e88ba20c000400000000001a0023000b0004007200000010001a000b00000003001000000000000000000000"  | xxd -r -p | tpmstream convert -
+```
 
 ## Find Examples for TPM Commands/Responses:
 
