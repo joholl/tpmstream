@@ -17,6 +17,10 @@ from .io.pcapng import Pcapng
 from .io.pretty import Pretty
 from .spec.commands.commands import Command
 
+parser = ArgumentParser(
+    description="Process TPM 2.0 commands and responses.",
+)
+
 
 def get_command_code(input):
     """Return TPM_CC if represented by input, or None otherwise."""
@@ -87,7 +91,7 @@ def examples(args):
             str(command_code)[len(TPM_CC.__name__) + 1 :] for command_code in TPM_CC
         ]
         closest_match = get_close_matches(args.command, options, n=1, cutoff=0)[0]
-        proposal = f"python -m {__package__} {''.join(sys.argv[1:-1])} {closest_match}"
+        proposal = f"{parser.prog} {''.join(sys.argv[1:-1])} {closest_match}"
         print(
             f"Unknown commandCode: {args.command}.\n\nDid you mean:\n\n  {proposal}\n",
             file=sys.stderr,
@@ -119,9 +123,6 @@ def examples(args):
     return 0
 
 
-parser = ArgumentParser(
-    description="Process TPM 2.0 commands and responses.",
-)
 parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 subparsers = parser.add_subparsers()
 subparsers.required = True
