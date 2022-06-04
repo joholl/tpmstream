@@ -2,8 +2,10 @@ import itertools
 from dataclasses import fields
 from typing import Any
 
+from tpmstream.common.errors import ParsingError
 from tpmstream.common.event import PATH_NODE_ROOT_NAME, MarshalEvent, Path, PathNode
 from tpmstream.common.util import is_list
+from tpmstream.io.binary.constrains import SizeConstraint
 from tpmstream.spec.commands.commands import Command
 
 # TODO error handling
@@ -160,15 +162,19 @@ def process_tpm2b(tpm_type, path):
     assert none is None
 
     size_field, buffer_field = fields(tpm_type)
-    size_size, buffer_size_exp = yield from process(
-        size_field.type, path / PathNode(size_field.name)
-    )
+    size_path = path / PathNode(size_field.name)
+    size_size, buffer_size_exp = yield from process(size_field.type, size_path)
     if is_list(buffer_field.type):
         # common tpm2b with byte buffer
         buffer_size, _ = yield from process_array(
             buffer_field.type, path, buffer_field.name, count=buffer_size_exp
         )
     else:
+        size_constraint = SizeConstraint(
+            constraint_path=size_path, size_max=buffer_size_exp
+        )
+        # TODO size_constraint +=, size_constraint.assert_done()
+
         # buffer represents single complex type, count is number of bytes
         if buffer_size_exp == 0:
             none = yield MarshalEvent(
@@ -180,7 +186,6 @@ def process_tpm2b(tpm_type, path):
             buffer_size, _ = yield from process(
                 buffer_field.type, path / PathNode(buffer_field.name)
             )
-        # TODO yield from assert_size(tpm_type, path, actual=buffer_size, expected=buffer_size_exp)
 
     return size_size + buffer_size, None
 
@@ -196,10 +201,13 @@ def process_tpmu(tpm_type, path, selector):
     ), f"Union type {tpm_type} must have attribute ._selected_by"
     # reverse dict
     selection = {v: k for k, v in tpm_type._selected_by.items()}
-    assert (
-        selector in selection
-    ), f"Selection error in {path} ({tpm_type.__name__}): {selector} not in {selection}"  # TODO as warning, also check if there is a None (i.e. default) option first
-    field = next(f for f in fields(tpm_type) if f.name == selection[selector])
+    try:
+        field = next(f for f in fields(tpm_type) if f.name == selection[selector])
+    except KeyError as error:
+        # TODO check if there is a None (i.e. default) option first
+        raise ParsingError(
+            f"Selection error in {path} ({tpm_type.__name__}): {selector} not in {selection}"
+        ) from error
 
     if field.type is None:
         return 0, None
@@ -208,7 +216,7 @@ def process_tpmu(tpm_type, path, selector):
         # union member of list type (must be statically sized as indicated in _list_size)
         assert hasattr(tpm_type, "_list_size")
         size, data = yield from process_array(
-            field.type, path, field.name, count=tpm_type._list_size[field.name]
+            field.type, path, name=field.name, count=tpm_type._list_size[field.name]
         )
     else:
         size, data = yield from process(field.type, path / PathNode(field.name))
@@ -219,6 +227,8 @@ def process_tpmu(tpm_type, path, selector):
 def process_command(path):
     """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
     tpm_type = Command
+    command_size_constraint = SizeConstraint()
+    authorization_area_constraint = SizeConstraint()
 
     none = yield MarshalEvent(path, tpm_type, ...)
     assert none is None
@@ -233,19 +243,21 @@ def process_command(path):
         ):
             continue
 
+        # resolve Any type with _type_maps/_selectors
         if field_type is Any:
             selector_name = tpm_type._selectors[field.name]
             types_map = tpm_type._type_maps[field.name]
-            # TODO warning / error
             assert selector_name in values, f"Did not parse {selector_name} yet."
             selector_value = values[selector_name]
-            assert (
-                selector_value in types_map
-            ), f"Cannot find type for {field.name} (selected by {selector_name}): {selector_value}"
-            field_type = types_map[selector_value]
+            try:
+                field_type = types_map[selector_value]
+            except KeyError as error:
+                raise ParsingError(
+                    f"Cannot find type for {field.name} (selected by {selector_name}): {selector_value}"
+                ) from error
 
         if field.name == "authorizationArea":
-            # authorizationArea is a list with 1-n elements (authSize is size in bytes)
+            # authorizationArea is a list with 1..n elements (authSize is size in bytes)
             auth_area_type = field_type.__args__[0]
             none = yield MarshalEvent(path / PathNode(field.name), field_type, ...)
             assert none is None
@@ -253,23 +265,35 @@ def process_command(path):
             auth_area_size_so_far = 0
             index = 0
             while auth_area_size_so_far < values["authSize"]:
-                authorizationArea_size, _ = yield from process(
+                authorization_area_size, _ = yield from process(
                     auth_area_type, path / PathNode(field.name, index)
                 )
-                auth_area_size_so_far += authorizationArea_size
+                auth_area_size_so_far += authorization_area_size
+                authorization_area_constraint -= authorization_area_size
                 index += 1
-            assert (
-                auth_area_size_so_far == values["authSize"]
-            ), f"Command: authSize is {values['authSize']} but parsing {index} authorizationArea(s) consumed {auth_area_size_so_far} bytes"
+            authorization_area_constraint.assert_done()
             size += auth_area_size_so_far
         else:
             # all other members
-            element_size, element_value = yield from process(
-                field_type, path / PathNode(field.name)
-            )
+            element_path = path / PathNode(field.name)
+            element_size, element_value = yield from process(field_type, element_path)
             size += element_size
 
+        if field.name == "commandSize":
+            command_size_constraint.set_constraint(
+                constraint_path=element_path, size_max=element_value
+            )
+        if field.name == "authSize":
+            authorization_area_constraint.set_constraint(
+                constraint_path=element_path, size_max=element_value
+            )
+
         values[field.name] = element_value
+        # can be negative if commandSize was not read, yet
+        command_size_constraint -= element_size
+
+    command_size_constraint.assert_done()
+
     return size, None
 
 
@@ -301,11 +325,12 @@ def process_response(path, command_code):
 
         if field_type is Any:
             types_map = tpm_type._type_maps[field.name]
-            # TODO warning / error
-            assert (
-                command_code in types_map
-            ), f"Cannot find type for {field.name} (selected by commandCode): {command_code}"
-            field_type = types_map[command_code]
+            try:
+                field_type = types_map[command_code]
+            except KeyError as error:
+                raise ParsingError(
+                    f"Cannot find type for {field.name} (selected by commandCode): {command_code}"
+                ) from error
 
         if field.name == "authorizationArea":
             # authorizationArea is a list with 1-n elements (remaining bytes)
@@ -317,12 +342,13 @@ def process_response(path, command_code):
             auth_area_size_so_far = 0
             index = 0
             while auth_area_size_so_far < auth_area_size:
-                authorizationArea_size, _ = yield from process(
+                authorization_area_size, _ = yield from process(
                     auth_area_type, path / PathNode(field.name, index)
                 )
-                auth_area_size_so_far += authorizationArea_size
+                auth_area_size_so_far += authorization_area_size
                 index += 1
             # TODO why not?
+            # TODO raise Parsing Error if auth_area_size_so_far != auth_area_size
             # try:
             #     assert auth_area_size_so_far == auth_area_size, f"Response: remaining bytes is {auth_area_size} but parsing {index} authorizationArea(s) consumed {auth_area_size_so_far} bytes"
             # except AssertionError as e:
