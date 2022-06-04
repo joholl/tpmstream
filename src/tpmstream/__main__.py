@@ -74,7 +74,7 @@ def examples(args):
     # TODO we can do better
     TPMSTREAM_PATH = os.path.abspath(os.path.dirname(__file__))
     PCAP_DIRECORY_PATH = os.path.join(
-        os.path.dirname(TPMSTREAM_PATH), "test/pcap/*.pcap"
+        os.path.dirname(os.path.dirname(TPMSTREAM_PATH)), "test/pcap/*.pcap"
     )
     paths = sorted(glob.glob(PCAP_DIRECORY_PATH))
 
