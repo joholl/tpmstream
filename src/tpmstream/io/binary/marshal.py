@@ -107,18 +107,21 @@ def process_primitive(tpm_type, path):
     return size, value
 
 
-def process_array(tpm_type, parent_path, name, count):
+def process_array(tpm_type, path, count):
     """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
     assert len(tpm_type.__args__) == 1
     element_type = tpm_type.__args__[0]
 
-    none = yield MarshalEvent(parent_path / PathNode(name), list[element_type], ...)
+    none = yield MarshalEvent(path, list[element_type], ...)
     assert none is None
+
+    parent_path = path[:-1]
 
     element_size = 0
     for index in range(count):
+        child_node = path[-1].with_index(index)
         element_size, _ = yield from process(
-            element_type, parent_path / PathNode(name, index)
+            element_type, parent_path / child_node, size_constraints=size_constraints
         )
     return element_size * count, None
 
@@ -339,7 +342,7 @@ def process_response(path, command_code):
     return size, None
 
 
-def process(tpm_type, path, selector=None, command_code=None):
+def process(tpm_type, path, selector=None, count=None, command_code=None):
     """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
     if hasattr(tpm_type, "_int_size"):
         # Primitives, TPMA
@@ -349,6 +352,13 @@ def process(tpm_type, path, selector=None, command_code=None):
     elif hasattr(tpm_type, "_selected_by"):
         # TPMU
         result = yield from process_tpmu(tpm_type, path, selector)
+    elif is_list(tpm_type):
+        # list[...]
+        result = yield from process_array(
+            tpm_type,
+            path,
+            count=count,
+        )
     elif tpm_type is Command:
         result = yield from process_command(path)
     elif tpm_type is Response:
