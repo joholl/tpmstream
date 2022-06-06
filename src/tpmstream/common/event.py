@@ -20,6 +20,9 @@ class PathNode:
             return self.name
         return f"{self.name}[{self.index}]"
 
+    def with_index(self, index):
+        return PathNode(name=self.name, index=index)
+
 
 class Path(tuple[PathNode]):
     def __new__(cls, obj=None):
