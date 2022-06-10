@@ -2,6 +2,7 @@ from tpmstream.common.event import MarshalEvent
 from tpmstream.io.pretty.unmarshal import get_type_name
 
 try:
+    from colorama import init
     from colorama.ansi import Fore, Style
 except ModuleNotFoundError:
     # mock for brython
@@ -12,6 +13,9 @@ except ModuleNotFoundError:
     class Style:
         def __getattr__(self, _name):
             return ""
+
+else:
+    init()
 
 
 def unmarshal(events: list[MarshalEvent]):
