@@ -7,6 +7,7 @@ from tpmstream.spec.structures.base_types import BYTE
 from ..binary.unmarshal import unmarshal as binary_unmarshal
 
 try:
+    from colorama import init
     from colorama.ansi import Fore, Style
 except ModuleNotFoundError:
     # mock for brython
@@ -17,6 +18,9 @@ except ModuleNotFoundError:
     class Style:
         def __getattr__(self, _name):
             return ""
+
+else:
+    init()
 
 
 # TODO to args
