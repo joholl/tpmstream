@@ -331,7 +331,6 @@ class TPMS_COMMAND_PARAMS_GET_SESSION_AUDIT_DIGEST:
 
 @tpm_dataclass
 class TPMS_COMMAND_PARAMS_NV_READ:
-    nvIndex: TPMI_RH_NV_INDEX
     size: UINT16
     offset: UINT16
 
