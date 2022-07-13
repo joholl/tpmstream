@@ -275,6 +275,7 @@ class TPMS_COMMAND_HANDLES_GET_SESSION_AUDIT_DIGEST:
 @tpm_dataclass
 class TPMS_COMMAND_HANDLES_NV_READ:
     authHandle: TPMI_RH_NV_AUTH
+    nvIndex: TPMI_RH_NV_INDEX
 
 
 @tpm_dataclass
