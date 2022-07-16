@@ -7,6 +7,7 @@ from ..structures.algorithem_parameters_and_structures import (
     TPMS_ALGORITHM_DETAIL_ECC,
     TPMT_SIGNATURE,
 )
+from ..structures.attached_component_structures import TPML_AC_CAPABILITIES, TPMS_AC_OUTPUT
 from ..structures.base_types import UINT16, UINT32
 from ..structures.constants import TPM_CC, TPM_RC
 from ..structures.context_data import TPMS_CONTEXT
@@ -643,6 +644,22 @@ class TPMS_RESPONSE_PARAMS_ENCRYPT_DECRYPT2:
 
 
 @tpm_dataclass
+class TPMS_RESPONSE_PARAMS_AC_GET_CAPABILITY:
+    moreData: TPMI_YES_NO
+    capabilitiesData: TPML_AC_CAPABILITIES
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_AC_SEND:
+    acDataOut: TPMS_AC_OUTPUT
+
+
+@tpm_dataclass
+class TPMS_RESPONSE_PARAMS_POLICY_AC_SEND_SELECT:
+    pass
+
+
+@tpm_dataclass
 class TPMS_RESPONSE_PARAMS_CERTIFY_X509:
     addedToCertificate: TPM2B_MAX_BUFFER
     tbsDigest: TPM2B_DIGEST
@@ -767,6 +784,9 @@ response_param_types = {
     TPM_CC.CreateLoaded: TPMS_RESPONSE_PARAMS_CREATE_LOADED,
     TPM_CC.PolicyAuthorizeNV: TPMS_RESPONSE_PARAMS_POLICY_AUTHORIZE_NV,
     TPM_CC.EncryptDecrypt2: TPMS_RESPONSE_PARAMS_ENCRYPT_DECRYPT2,
+    TPM_CC.AC_GetCapability: TPMS_RESPONSE_PARAMS_AC_GET_CAPABILITY,
+    TPM_CC.AC_Send: TPMS_RESPONSE_PARAMS_AC_SEND,
+    TPM_CC.Policy_AC_SendSelect: TPMS_RESPONSE_PARAMS_POLICY_AC_SEND_SELECT,
     TPM_CC.CertifyX509: TPMS_RESPONSE_PARAMS_CERTIFY_X509,
     TPM_CC.ACT_SetTimeout: TPMS_RESPONSE_PARAMS_ACT_SET_TIMEOUT,
 }
