@@ -57,6 +57,7 @@ class TPMU_HA:
         "sha3_256": TPM_ALG.SHA3_256,
         "sha3_384": TPM_ALG.SHA3_384,
         "sha3_512": TPM_ALG.SHA3_512,
+        "null": TPM_ALG.NULL,
     }
 
     sha: list[BYTE]
@@ -68,6 +69,7 @@ class TPMU_HA:
     sha3_256: list[BYTE]
     sha3_384: list[BYTE]
     sha3_512: list[BYTE]
+    null: None
 
 
 @tpm_dataclass
@@ -321,6 +323,7 @@ class TPMU_CAPABILITIES:
         "eccCurves": TPM_CAP.ECC_CURVES,
         "authPolicies": TPM_CAP.AUTH_POLICIES,
         "actData": TPM_CAP.ACT,
+        "null": TPM_CAP.VENDOR_PROPERTY,
     }
 
     algorithms: TPML_ALG_PROPERTY
@@ -334,6 +337,7 @@ class TPMU_CAPABILITIES:
     eccCurves: TPML_ECC_CURVE
     authPolicies: TPML_TAGGED_POLICY
     actData: TPML_ACT_DATA
+    null: None  # added to satisfy selector completeness
 
 
 # TODO union in a non-tagged type

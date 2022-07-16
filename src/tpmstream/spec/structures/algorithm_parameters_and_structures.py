@@ -35,7 +35,7 @@ class TPMU_SYM_KEY_BITS:
         "tdes": TPM_ALG.TDES,
         "aes": TPM_ALG.AES,
         "sm4": TPM_ALG.SM4,
-        "camellia": TPM_ALG.NULL,
+        "camellia": TPM_ALG.CAMELLIA,
         "sym": TPM_KEY_BITS,
         "xor": TPM_ALG.XOR,
         "null": TPM_ALG.NULL,
@@ -56,7 +56,7 @@ class TPMU_SYM_MODE:
         "tdes": TPM_ALG.TDES,
         "aes": TPM_ALG.AES,
         "sm4": TPM_ALG.SM4,
-        "camellia": TPM_ALG.NULL,
+        "camellia": TPM_ALG.CAMELLIA,
         "sym": None,
         "xor": TPM_ALG.XOR,
         "null": TPM_ALG.NULL,
@@ -77,7 +77,7 @@ class TPMU_SYM_DETAILS:
         "tdes": TPM_ALG.TDES,
         "aes": TPM_ALG.AES,
         "sm4": TPM_ALG.SM4,
-        "camellia": TPM_ALG.NULL,
+        "camellia": TPM_ALG.CAMELLIA,
         "sym": None,
         "xor": TPM_ALG.XOR,
         "null": TPM_ALG.NULL,
@@ -314,6 +314,10 @@ class TPMS_KEY_SCHEME_ECMQV(TPMS_SCHEME_HASH):
 
 
 # For all !ALG.HM (i.e. hash + mask generation) algorithms only
+class TPMS_SCHEME_MGF1(TPMS_SCHEME_HASH):
+    pass
+
+
 class TPMS_SCHEME_KDF1_SP800_108(TPMS_SCHEME_HASH):
     pass
 
@@ -329,12 +333,14 @@ class TPMS_SCHEME_KDF2(TPMS_SCHEME_HASH):
 @tpm_dataclass
 class TPMU_KDF_SCHEME:
     _selected_by = {
+        "mgf1": TPM_ALG.MGF1,
         "kdf1_sp800_108": TPM_ALG.KDF1_SP800_108,
         "kdf1_sp800_56a": TPM_ALG.KDF1_SP800_56A,
         "kdf2": TPM_ALG.KDF2,
         "null": TPM_ALG.NULL,
     }
 
+    mgf1: TPMS_SCHEME_MGF1
     kdf1_sp800_108: TPMS_SCHEME_KDF1_SP800_108
     kdf1_sp800_56a: TPMS_SCHEME_KDF1_SP800_56A
     kdf2: TPMS_SCHEME_KDF2
