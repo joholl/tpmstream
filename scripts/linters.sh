@@ -2,6 +2,7 @@
 set -ex
 
 DIR=$(pwd)
+FILES="$(find -name "*.py" -not -path "./venv/*")"
 CHECK=YES
 LINTERS="autoflafke|black|isort"
 
@@ -54,7 +55,7 @@ fi
 
 case "${LINTERS}" in
     *"autoflafke"*)
-    python -m autoflake --in-place --remove-all-unused-imports ${check_autoflake} ${DIR}/**/*.py
+    python -m autoflake --in-place --remove-all-unused-imports ${check_autoflake} ${FILES}
     ;;
 esac
 
