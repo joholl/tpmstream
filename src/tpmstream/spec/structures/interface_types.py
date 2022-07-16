@@ -89,6 +89,7 @@ class TPMI_DH_CONTEXT(TPM_HANDLE):
 class TPMI_DH_SAVED(TPM_HANDLE):
     _valid_values = ValidValues(
         TPM_HR.HMAC_SESSION,
+        TPM_HR.POLICY_SESSION,
         TPM_HR.TRANSIENT.by_number(0x80000000),
         TPM_HR.TRANSIENT.by_number(0x80000001),
         TPM_HR.TRANSIENT.by_number(0x80000002),
