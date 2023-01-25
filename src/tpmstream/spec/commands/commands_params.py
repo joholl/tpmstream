@@ -1,5 +1,5 @@
 from ..common.values import tpm_dataclass
-from ..structures.algorithem_parameters_and_structures import (
+from ..structures.algorithm_parameters_and_structures import (
     TPM2B_ECC_PARAMETER,
     TPM2B_ECC_POINT,
     TPM2B_ENCRYPTED_SECRET,
@@ -33,7 +33,6 @@ from ..structures.interface_types import (
     TPMI_ECC_KEY_EXCHANGE,
     TPMI_RH_ENABLES,
     TPMI_RH_HIERARCHY,
-    TPMI_RH_NV_INDEX,
     TPMI_YES_NO,
 )
 from ..structures.key_object_complex import (

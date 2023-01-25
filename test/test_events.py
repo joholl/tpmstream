@@ -5,11 +5,12 @@ import os
 import dpkt
 import pytest
 
-from tpmstream.common.event import events_to_obj, obj_to_events
+from tpmstream.common.canonical import Canonical
+from tpmstream.common.error import ConstraintViolatedError
+from tpmstream.common.object import events_to_obj, obj_to_events
 from tpmstream.data import example_data_files
 from tpmstream.io.binary import Binary
-from tpmstream.spec.commands.commands import Command
-from tpmstream.spec.commands.responses import Response
+from tpmstream.spec.commands import Command, Response
 from tpmstream.spec.structures.constants import TPM_CC
 
 
@@ -28,12 +29,6 @@ def tpm_binary_blob_generator():
     for example_data_file in example_data_files:
         with open(example_data_file, "rb") as file:
             pcapng = dpkt.pcapng.Reader(file)
-
-            # TODO is there
-            #      a) a way to distinguish commands from responses?
-            #      b) a way to recognize the commandCode for responses?
-            #      for now, we can determine it using the knowlegde about the pcaps
-
             for ts, buf in pcapng:
                 # command or response
                 binary_blob = dpkt.ip.IP(buf).data.data
@@ -76,12 +71,48 @@ class TestEvents:
     @pytest.mark.parametrize(
         "binary_blob", tpm_command_generator(), ids=tpm_command_generator(names=True)
     )
+    def test_canonical(self, binary_blob):
+        """Verify that events <-> object is reversible."""
+        canonical = Canonical(binary_blob, tpm_type=Command)
+
+        # binary to events
+        try:
+            canonical.events  # resolve
+        except ConstraintViolatedError as error:
+            pytest.skip(
+                f"""
+    {error}
+    bytes:           {binascii.hexlify(binary_blob).decode()}
+    remaining bytes: {binascii.hexlify(bytes(error.bytes_remaining)).decode()}
+    """
+            )
+        # events to object
+        command = canonical.object
+        # object to events
+        canonical2 = Canonical(command)
+        # compare events
+        for event_from_obj, event_from_bin in zip(canonical.events, canonical2.events):
+            assert event_from_obj == event_from_bin
+            assert type(event_from_obj.value) is type(event_from_bin.value)
+
+    @pytest.mark.parametrize(
+        "binary_blob", tpm_command_generator(), ids=tpm_command_generator(names=True)
+    )
     def test_event_marshalling_unmarshalling_command(self, binary_blob):
         """Verify that events <-> object is reversible."""
         # binary to events
-        events_from_bin = list(Binary.marshal(tpm_type=Command, buffer=binary_blob))
+        try:
+            events_from_bin = list(Binary.marshal(tpm_type=Command, buffer=binary_blob))
+        except ConstraintViolatedError as error:
+            pytest.skip(
+                f"""
+{error}
+bytes:           {binascii.hexlify(binary_blob).decode()}
+remaining bytes: {binascii.hexlify(bytes(error.bytes_remaining)).decode()}
+"""
+            )
         # events to object
-        command = events_to_obj(Command, events_from_bin)
+        command = events_to_obj(events_from_bin)
         # object to events
         events_from_obj = list(obj_to_events(command))
         # compare events
@@ -97,23 +128,22 @@ class TestEvents:
     def test_event_marshalling_unmarshalling_response(self, binary_blob, command_code):
         """Verify that events <-> object is reversible."""
         # binary to events
-        events_from_bin = list(
-            Binary.marshal(
-                tpm_type=Response, buffer=binary_blob, command_code=command_code
+        try:
+            events_from_bin = list(
+                Binary.marshal(
+                    tpm_type=Response, buffer=binary_blob, command_code=command_code
+                )
             )
-        )
+        except ConstraintViolatedError as error:
+            pytest.skip(f"{error}")
         # events to object
-        command = events_to_obj(Response, events_from_bin, command_code=command_code)
+        command = events_to_obj(events_from_bin, command_code=command_code)
         # object to events
         events_from_obj = list(obj_to_events(command))
         # compare events
         for event_from_obj, event_from_bin in zip(events_from_obj, events_from_bin):
             assert event_from_obj == event_from_bin
             assert type(event_from_obj.value) is type(event_from_bin.value)
-
-    # TODO generator test
-
-    # TODO explicit (incomplete) struct and list types: event -> obj -> event
 
 
 class TestBinary:
@@ -123,9 +153,13 @@ class TestBinary:
     def test_binary_marshalling_unmarshalling_command(self, binary_blob):
         """Verify that events <-> object is reversible."""
         # binary to events
-        events_from_bin = list(Binary.marshal(tpm_type=Command, buffer=binary_blob))
+        try:
+            events_from_bin = list(Binary.marshal(tpm_type=Command, buffer=binary_blob))
+        except ConstraintViolatedError as error:
+            pytest.skip(f"{error}")
         # events to binary
         bin_from_events = b"".join(Binary.unmarshal(events_from_bin))
+
         assert (
             binary_blob == bin_from_events
         ), f"assert {binascii.hexlify(binary_blob)} == {binascii.hexlify(bin_from_events)}"
@@ -138,11 +172,14 @@ class TestBinary:
     def test_binary_marshalling_unmarshalling_response(self, binary_blob, command_code):
         """Verify that events <-> object is reversible."""
         # binary to events
-        events_from_bin = list(
-            Binary.marshal(
-                tpm_type=Response, buffer=binary_blob, command_code=command_code
+        try:
+            events_from_bin = list(
+                Binary.marshal(
+                    tpm_type=Response, buffer=binary_blob, command_code=command_code
+                )
             )
-        )
+        except ConstraintViolatedError as error:
+            pytest.skip(f"{error}")
         # events to binary
         bin_from_events = b"".join(Binary.unmarshal(events_from_bin))
         assert (

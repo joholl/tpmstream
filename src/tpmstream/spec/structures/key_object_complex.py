@@ -1,5 +1,5 @@
 from ..common.values import ValidValues, tpm_dataclass
-from .algorithem_parameters_and_structures import (
+from .algorithm_parameters_and_structures import (
     TPM2B_ECC_PARAMETER,
     TPM2B_PRIVATE_KEY_RSA,
     TPM2B_PUBLIC_KEY_RSA,
