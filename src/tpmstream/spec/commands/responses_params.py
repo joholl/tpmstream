@@ -1,5 +1,5 @@
 from ..common.values import tpm_dataclass
-from ..structures.algorithem_parameters_and_structures import (
+from ..structures.algorithm_parameters_and_structures import (
     TPM2B_ECC_POINT,
     TPM2B_ENCRYPTED_SECRET,
     TPM2B_PUBLIC_KEY_RSA,
@@ -7,7 +7,10 @@ from ..structures.algorithem_parameters_and_structures import (
     TPMS_ALGORITHM_DETAIL_ECC,
     TPMT_SIGNATURE,
 )
-from ..structures.attached_component_structures import TPML_AC_CAPABILITIES, TPMS_AC_OUTPUT
+from ..structures.attached_component_structures import (
+    TPML_AC_CAPABILITIES,
+    TPMS_AC_OUTPUT,
+)
 from ..structures.base_types import UINT16, UINT32
 from ..structures.constants import TPM_CC, TPM_RC
 from ..structures.context_data import TPMS_CONTEXT
