@@ -1,10 +1,8 @@
-import binascii
 import io
 
 import dpkt
 from dpkt.dpkt import UnpackError
 
-from ...spec.structures.interface_types import TPMI_ST_COMMAND_TAG
 from ..binary import Binary
 
 
@@ -59,5 +57,8 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None):
     file = io.BytesIO(bytes(buffer))
     pkg_bytes = bytes_from_pcap_file(file)
     yield from Binary.marshal(
-        tpm_type, buffer=pkg_bytes, root_path=root_path, command_code=command_code
+        tpm_type=tpm_type,
+        buffer=pkg_bytes,
+        root_path=root_path,
+        command_code=command_code,
     )

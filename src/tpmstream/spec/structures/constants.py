@@ -1,5 +1,6 @@
 from enum import IntEnum, auto
 
+from ..common.base_type import numeric
 from ..common.values import tpm_enum
 from .base_types import INT8, UINT8, UINT16, UINT32
 
@@ -29,18 +30,11 @@ class AlgType(IntEnum):
     Object = auto()
 
 
+@numeric
 class AlgValue:
     def __init__(self, value, *types):
         self._value = value
         self._types = types
-
-    def __eq__(self, other):
-        if hasattr(other, "_value"):
-            return self._value == other._value
-        return self._value == other
-
-    def __hash__(self):
-        return hash(self._value)
 
     def to_bytes(self, *args):
         return self._value.to_bytes(*args)
@@ -56,8 +50,8 @@ class TPM_ALG(UINT16):
     SHA1 = AlgValue(0x0004, AlgType.Hash)
     HMAC = AlgValue(0x0005, AlgType.Hash, AlgType.Signing)
     AES = AlgValue(0x0006, AlgType.Symmetric)
-    MGF1 = AlgValue(0x0007, (AlgType.Hash, AlgType.MaskGeneration))
-    KEYEDHASH = AlgValue(0x0008, (AlgType.Hash, AlgType.Object))
+    MGF1 = AlgValue(0x0007, AlgType.Hash, AlgType.MaskGeneration)
+    KEYEDHASH = AlgValue(0x0008, AlgType.Hash, AlgType.Object)
     XOR = AlgValue(0x000A, AlgType.Hash, AlgType.Symmetric)
     SHA256 = AlgValue(0x000B, AlgType.Hash)
     SHA384 = AlgValue(0x000C, AlgType.Hash)
@@ -247,7 +241,6 @@ class TPM_CC(UINT32):
     Policy_AC_SendSelect = 0x00000196
     CertifyX509 = 0x00000197
     ACT_SetTimeout = 0x00000198
-    Vendor_TCG_Test = 0x20000000
 
 
 @tpm_enum

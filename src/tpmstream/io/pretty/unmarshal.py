@@ -1,9 +1,10 @@
 import binascii
 
-from tpmstream.common.event import MarshalEvent, PathNode
+from tpmstream.common.event import Event, MarshalEvent
 from tpmstream.common.util import is_list
 from tpmstream.spec.structures.base_types import BYTE
 
+from ...common.path import PathNode
 from ..binary.unmarshal import unmarshal as binary_unmarshal
 
 try:
@@ -27,7 +28,7 @@ else:
 show_attributes = True
 
 
-def unmarshal(events: list[MarshalEvent]):
+def unmarshal(events: list[Event]):
     """Generator. Take iterable which yields MarshalEvent. Yield strings."""
     # TODO do not print list parents (unless list is empty)
     events = iter(events)

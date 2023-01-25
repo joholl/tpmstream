@@ -26,7 +26,7 @@ def detect_format_and_yield_buffer(buffer):
         yield "binary"
     else:
         raise IOError(
-            f"Unknown detect input format: {binascii.hexlify(buffer).decode()}"
+            f"Unknown detect input format: magic number is {binascii.hexlify(look_ahead).decode()}"
         )
 
     yield from look_ahead
@@ -41,14 +41,14 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None):
 
     if format == "pcapng":
         yield from Pcapng.marshal(
-            tpm_type,
+            tpm_type=tpm_type,
             buffer=format_buffer_iter,
             root_path=root_path,
             command_code=command_code,
         )
     elif format == "binary":
         yield from Binary.marshal(
-            tpm_type,
+            tpm_type=tpm_type,
             buffer=format_buffer_iter,
             root_path=root_path,
             command_code=command_code,

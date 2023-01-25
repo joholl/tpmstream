@@ -10,12 +10,16 @@ class ValidValues:
         self._values = values
 
     def __contains__(self, value):
-        self.get(value) is not None
+        return self.get(value) is not None
 
     def get(self, value):
         for v in self._values:
             if hasattr(v, "__contains__") and value in v:
-                if isinstance(v, NamedRange):
+                if isinstance(v, range):
+                    if value not in v:
+                        raise ValueError(f"{value} not in {v}")
+                    return value
+                elif isinstance(v, NamedRange):
                     return v.by_number(value)
                 else:
                     # enum type
@@ -23,6 +27,18 @@ class ValidValues:
             if value == v:
                 return v
         return None
+
+    def __iter__(self):
+        for v in self._values:
+            # range, NamedRange or enum type
+            if hasattr(v, "__iter__"):
+                yield from v
+            else:
+                yield v
+
+    def __repr__(self):
+        args_str = ", ".join(f"{v}" for v in self._values)
+        return f"{type(self).__name__}({args_str})"
 
 
 @dataclass
@@ -45,15 +61,23 @@ class NamedRange:
     def __contains__(self, item):
         return self._start <= item < self._end
 
+    def __iter__(self):
+        yield from (self.by_number(i) for i in range(self._start, self._end))
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self._type.__name__}, {self._basename}, {self._start}, {self._end})"
+
     def by_number(self, number):
         if not self._start <= number < self._end:
             return ValueError(
                 f"{number:x} is not in range({self._start:0}, {self._end:0})"
             )
+
         name = "{basename}{sep}{index:0{nibbles}x}".format(
             basename=self._basename,
             sep=self._sep,
-            index=number - self._start,
+            # TODO cast should not be necessary, but python does not call number.__sub__()
+            index=int(number) - self._start,
             nibbles=self._index_nibbles,
         )
         return self._type(value=number, name=name)
@@ -153,24 +177,6 @@ def tpm_bitfield(cls):
     return cls
 
 
-# TODO rm
-@tpm_bitfield
-class SomeAttr:
-    A = 1
-    B = 2
-    C = 4 | 8
-    D = 16
-
-
-# TODO
-# baz = SomeAttr
-# foo = SomeAttr.C
-# bar = SomeAttr(2 | 8 | 16).C
-# foobar = SomeAttr(2 | 8 | 16)
-# print()
-#
-
-
 def tpm_enum(*args, filter=None):
     def _tpm_enum(cls):
         """
@@ -189,6 +195,9 @@ def tpm_enum(*args, filter=None):
             def __contains__(self, obj):
                 return self.class_contains(obj)
 
+            def __str__(self):
+                return self.__name__
+
         cls = IterableMeta(cls.__name__, cls.__bases__, dict(cls.__dict__))
 
         @classmethod
@@ -206,7 +215,7 @@ def tpm_enum(*args, filter=None):
         def class_contains(cls, value):
             """Iterator for all public non-function attributes."""
             return any(
-                value == attr or (hasattr(value, "__contains__") and value in attr)
+                value == attr or (hasattr(attr, "__contains__") and value in attr)
                 for attr in cls
             )
 
@@ -249,7 +258,7 @@ def tpm_enum(*args, filter=None):
                 try:
                     instance = type(self).by_value(value)
                     self._name = instance._name
-                    self._value = instance
+                    self._value = instance._value
                 except ValueError:
                     # value is unknown
                     self._name = None
@@ -258,18 +267,18 @@ def tpm_enum(*args, filter=None):
         setattr(cls, "__init__", __init__)
 
         def __format__(self, _format_spec=None):
-            if hasattr(self, "_valid_values"):
-                return f"{self._valid_values.get(self)}"
             return f"{type(self).__name__}.{self._name}"
 
         setattr(cls, "__format__", __format__)
         setattr(cls, "__str__", __format__)
         setattr(cls, "__repr__", __format__)
 
-        # TODO delegate fpunctions to value (__getattribute__?)
+        setattr(cls, "_valid_values", ValidValues(cls))
+
+        # TODO recursion error
         # def __getattr__(self, name):
         #     return getattr(self._value, name)
-        # attrs["__getattr__"] = __getattr__
+        # setattr(cls, "__getattr__", __getattr__)
 
         # replace attributes with instances of cls, delete those for which filter is falsy
         for attr_name, attr_value in inspect.getmembers(cls):

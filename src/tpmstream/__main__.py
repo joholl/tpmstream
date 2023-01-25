@@ -5,8 +5,8 @@ import sys
 from argparse import ArgumentParser, FileType
 from difflib import get_close_matches
 
-from tpmstream.common.event import events_to_objs, obj_to_events
-from tpmstream.spec.structures.constants import TPM_CC
+from tpmstream.common.object import events_to_objs, obj_to_events
+from tpmstream.spec.commands import CommandResponseStream
 
 from . import __version__
 from .io import bytes_from_files
@@ -15,28 +15,35 @@ from .io.binary import Binary
 from .io.events import Events
 from .io.pcapng import Pcapng
 from .io.pretty import Pretty
-from .spec.commands.commands import Command
+
+# TODO import .io.tpm_pytss.mapping
+from .spec.structures import structures_types
+from .spec.structures.constants import TPM_CC
 
 parser = ArgumentParser(
     description="Process TPM 2.0 commands and responses.",
 )
 
 
-def get_command_code(input):
-    """Return TPM_CC if represented by input, or None otherwise."""
-    for command_code in TPM_CC:
-        # strip the leading "TPM_CC." and then compare with some variations
-        base = f"{command_code}"[len(TPM_CC.__name__) + 1 :]
-        valid_variations = (
-            f"{base}",  # NV_Write
-            f"TPM2_{base}",  # TPM2_NV_Write
-            f"TPM_CC_{base}",  # TPM_CC_NV_Write
-            f"TPM_CC.{base}",  # TPM_CC.NV_Write
-        )
+def fuzzy_match(input: str, options: dict[str, any], name=None):
+    if name is None:
+        name = "value"
 
-        if input in valid_variations:
-            return command_code
+    try:
+        result = options[input]
+    except KeyError:
+        pass
+    else:
+        return result
 
+    # failed to match, propose closest fit
+    closest_match = get_close_matches(input, options.keys(), n=1, cutoff=0)[0]
+    # TODO this can replace other parts of the command
+    proposal = f"{parser.prog} {' '.join(sys.argv[1:]).replace(input, closest_match)}"
+    print(
+        f"Unknown {name}: {input}.\n\nDid you mean:\n\n  {proposal}\n",
+        file=sys.stderr,
+    )
     return None
 
 
@@ -53,8 +60,27 @@ def convert(args):
         "pretty": Pretty,
     }[args.format_out]
 
+    if args.type is None:
+        tpm_type = CommandResponseStream
+    else:
+        # TODO all types
+        tpm_type = fuzzy_match(
+            args.type, {t.__name__: t for t in structures_types}, "type"
+        )
+        if tpm_type is None:
+            return -1
+
+    if tpm_type is not CommandResponseStream and args.format_in == "auto":
+        raise RuntimeError(
+            "Custom type (--type=...) is incompatible with --in=auto (default)"
+        )
+
     # binary to events to pretty
-    events = format_in.marshal(tpm_type=Command, buffer=bytes_from_files(args.file))
+    # TODO abort_on_error as cli argument
+    events = format_in.marshal(
+        tpm_type=tpm_type, buffer=bytes_from_files(args.file), abort_on_error=False
+    )
+
     for line in format_out.unmarshal(events):
         if isinstance(line, bytes):
             print(" " + binascii.hexlify(line).decode(), end="")
@@ -72,34 +98,29 @@ def examples(args):
     )
     paths = sorted(glob.glob(PCAP_DIRECORY_PATH))
 
+    def cc_name(command_code: TPM_CC):
+        # strip leading "TPM_CC."
+        return str(command_code)[len(TPM_CC.__name__) + 1 :]
+
     if args.command is None:
         for command_code in TPM_CC:
             # remove leading "TPM_CC_"
-            print(str(command_code)[len(TPM_CC.__name__) + 1 :])
+            print(cc_name(command_code))
         return
 
-    sought_command_code = get_command_code(args.command)
+    sought_command_code = fuzzy_match(
+        args.command, {cc_name(cc): cc for cc in TPM_CC}, name="commandCode"
+    )
     if sought_command_code is None:
-        # failed to match command_code, propose closest fit
-        options = [
-            str(command_code)[len(TPM_CC.__name__) + 1 :] for command_code in TPM_CC
-        ]
-        closest_match = get_close_matches(args.command, options, n=1, cutoff=0)[0]
-        proposal = f"{parser.prog} {''.join(sys.argv[1:-1])} {closest_match}"
-        print(
-            f"Unknown commandCode: {args.command}.\n\nDid you mean:\n\n  {proposal}\n",
-            file=sys.stderr,
-        )
         return -1
-
-    try:
-        sought_command_code = getattr(TPM_CC, args.command)
-    except AttributeError as e:
-        raise AttributeError(f"Unknown commandCode: {args.command}") from e
 
     for path in paths:
         with open(path, "rb") as file:
-            events = list(Auto.marshal(tpm_type=Command, buffer=bytes_from_files(file)))
+            events = list(
+                Auto.marshal(
+                    tpm_type=CommandResponseStream, buffer=bytes_from_files(file)
+                )
+            )
 
         # TODO Get Responses, too. Response objects should know they commandCode, maybe via ._commandCode?
         for cmd_or_rsp in events_to_objs(events):
@@ -136,6 +157,11 @@ format_out_arg = {
     "default": "pretty",
     "help": "output stream format",
 }
+type_arg = {
+    "dest": "type",
+    "type": str,
+    "help": "type to parse, default is CommandResponseStream; incompatible with --in=auto",
+}
 
 parser_convert = subparsers.add_parser(
     "convert",
@@ -147,12 +173,14 @@ parser_convert.add_argument(
 )
 parser_convert.add_argument("--in", **format_in_arg)
 parser_convert.add_argument("--out", **format_out_arg)
+parser_convert.add_argument("--type", **type_arg)
 parser_convert.set_defaults(func=convert)
 
 parser_example = subparsers.add_parser("example", aliases=["ex"])
 parser_example.add_argument(
     "command", type=str, nargs="?", help="TPM Command, like TPM2_GetRandom"
 )
+# TODO add type_arg
 parser_example.set_defaults(func=examples)
 
 # TODO requires eval "$(register-python-argcomplete tpmstream/__main__.py)"
