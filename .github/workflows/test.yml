@@ -27,7 +27,7 @@ jobs:
         #if: steps.cache-virtualenv.outputs.cache-hit != 'true'
 
       - name: Test
-        run: pytest
+        run: python -m pytest
 
   linters:
     runs-on: ubuntu-latest
