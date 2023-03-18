@@ -1,4 +1,4 @@
-![GitHub Actions](https://github.com/joholl/tpmstream/actions/workflows/test.yml/badge.svg)
+[![CI](https://github.com/joholl/tpmstream/actions/workflows/test.yml/badge.svg)](https://github.com/joholl/tpmstream/actions/workflows/test.yml)
 
 # tpmstream
 
