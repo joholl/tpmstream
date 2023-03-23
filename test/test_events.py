@@ -1,5 +1,4 @@
 import binascii
-import glob
 import itertools
 import os
 
@@ -7,13 +6,11 @@ import dpkt
 import pytest
 
 from tpmstream.common.event import events_to_obj, obj_to_events
+from tpmstream.data import example_data_files
 from tpmstream.io.binary import Binary
 from tpmstream.spec.commands.commands import Command
 from tpmstream.spec.commands.responses import Response
 from tpmstream.spec.structures.constants import TPM_CC
-
-TEST_PATH = os.path.abspath(__file__)
-PCAP_DIRECORY_PATH = os.path.join(os.path.dirname(TEST_PATH), "pcap/*.pcap")
 
 
 def get_comand_code(binary_blob) -> TPM_CC:
@@ -27,12 +24,9 @@ def get_test_name(path, command_code):
     return f"{file_basename}_{command_code}"
 
 
-# TODO rm
-def tpm_binary_blob_generator(pcap_direcory_path):
-    paths = sorted(glob.glob(pcap_direcory_path))
-
-    for path in paths:
-        with open(path, "rb") as file:
+def tpm_binary_blob_generator():
+    for example_data_file in example_data_files:
+        with open(example_data_file, "rb") as file:
             pcapng = dpkt.pcapng.Reader(file)
 
             # TODO is there
@@ -43,11 +37,11 @@ def tpm_binary_blob_generator(pcap_direcory_path):
             for ts, buf in pcapng:
                 # command or response
                 binary_blob = dpkt.ip.IP(buf).data.data
-                yield path, binary_blob
+                yield example_data_file, binary_blob
 
 
-def tpm_command_generator(pcap_direcory_path=PCAP_DIRECORY_PATH, names=False):
-    binary_blob_gen = tpm_binary_blob_generator(pcap_direcory_path=pcap_direcory_path)
+def tpm_command_generator(names=False):
+    binary_blob_gen = tpm_binary_blob_generator()
     if names:
         yield from (
             get_test_name(path, get_comand_code(binary_blob))
@@ -61,8 +55,8 @@ def tpm_command_generator(pcap_direcory_path=PCAP_DIRECORY_PATH, names=False):
     )
 
 
-def tpm_response_generator(pcap_direcory_path=PCAP_DIRECORY_PATH, names=False):
-    binary_blob_gen = tpm_binary_blob_generator(pcap_direcory_path=pcap_direcory_path)
+def tpm_response_generator(names=False):
+    binary_blob_gen = tpm_binary_blob_generator()
 
     command_code = None
     for path, binary_blob in binary_blob_gen:
