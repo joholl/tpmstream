@@ -1,6 +1,4 @@
 import binascii
-import glob
-import os
 import sys
 from argparse import ArgumentParser, FileType
 from difflib import get_close_matches
@@ -9,6 +7,7 @@ from tpmstream.common.event import events_to_objs, obj_to_events
 from tpmstream.spec.structures.constants import TPM_CC
 
 from . import __version__
+from .data import example_data_files
 from .io import bytes_from_files
 from .io.auto import Auto
 from .io.binary import Binary
@@ -65,13 +64,6 @@ def convert(args):
 
 
 def examples(args):
-    # TODO we can do better
-    TPMSTREAM_PATH = os.path.abspath(os.path.dirname(__file__))
-    PCAP_DIRECORY_PATH = os.path.join(
-        os.path.dirname(os.path.dirname(TPMSTREAM_PATH)), "test/pcap/*.pcap"
-    )
-    paths = sorted(glob.glob(PCAP_DIRECORY_PATH))
-
     if args.command is None:
         for command_code in TPM_CC:
             # remove leading "TPM_CC_"
@@ -97,8 +89,8 @@ def examples(args):
     except AttributeError as e:
         raise AttributeError(f"Unknown commandCode: {args.command}") from e
 
-    for path in paths:
-        with open(path, "rb") as file:
+    for example_data_file in example_data_files:
+        with open(example_data_file, "rb") as file:
             events = list(Auto.marshal(tpm_type=Command, buffer=bytes_from_files(file)))
 
         # TODO Get Responses, too. Response objects should know they commandCode, maybe via ._commandCode?
