@@ -94,12 +94,23 @@ def examples(args):
             events = list(Auto.marshal(tpm_type=Command, buffer=bytes_from_files(file)))
 
         # TODO Get Responses, too. Response objects should know they commandCode, maybe via ._commandCode?
-        for cmd_or_rsp in events_to_objs(events):
+        objs = list(events_to_objs(events))
+        for i, cmd_or_rsp in enumerate(objs):
             if (
                 hasattr(cmd_or_rsp, "commandCode")
                 and cmd_or_rsp.commandCode == sought_command_code
             ):
                 events_from_obj = list(obj_to_events(cmd_or_rsp))
+                for item in Binary.unmarshal(events_from_obj):
+                    print(" " + binascii.hexlify(item).decode(), end="")
+                print()
+                for line in Pretty.unmarshal(events_from_obj):
+                    print(line)
+                print()
+
+                # Response
+                print("--- Response ---")
+                events_from_obj = list(obj_to_events(objs[i+1]))
                 for item in Binary.unmarshal(events_from_obj):
                     print(" " + binascii.hexlify(item).decode(), end="")
                 print()
