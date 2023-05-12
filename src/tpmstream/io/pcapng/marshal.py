@@ -50,7 +50,7 @@ def bytes_from_pcap_file(file):
         yield from pkg_bytes
 
 
-def marshal(tpm_type, buffer, root_path=None, command_code=None):
+def marshal(tpm_type, buffer, root_path=None, command_code=None, **kwargs):
     """Generator. Take iterable which yields single bytes. Yield MarshalEvents."""
     # Emulate file from bytes
     # TODO bytes(buffer) consumes whole buffer... can we avoid this
@@ -61,4 +61,5 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None):
         buffer=pkg_bytes,
         root_path=root_path,
         command_code=command_code,
+        **kwargs,
     )
