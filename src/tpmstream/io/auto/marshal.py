@@ -33,7 +33,7 @@ def detect_format_and_yield_buffer(buffer):
     yield from buffer_iter
 
 
-def marshal(tpm_type, buffer, root_path=None, command_code=None):
+def marshal(tpm_type, buffer, root_path=None, command_code=None, **kwargs):
     """Generator. Take iterable which yields single bytes. Yield MarshalEvents. Be smart about format."""
     format_buffer_iter = detect_format_and_yield_buffer(buffer)
 
@@ -45,6 +45,7 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None):
             buffer=format_buffer_iter,
             root_path=root_path,
             command_code=command_code,
+            **kwargs,
         )
     elif format == "binary":
         yield from Binary.marshal(
@@ -52,6 +53,7 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None):
             buffer=format_buffer_iter,
             root_path=root_path,
             command_code=command_code,
+            **kwargs,
         )
     else:
         raise RuntimeError(f"Unknown input format: {format}")

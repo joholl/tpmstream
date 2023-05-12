@@ -593,7 +593,7 @@ class TestConstraintsEvents:
         )
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=startup_command_binary, abort_on_error=False
+            tpm_type=Command, buffer=startup_command_binary, abort_on_error=True
         )
 
         # process the events
@@ -606,7 +606,7 @@ class TestConstraintsEvents:
         )
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=create_primary_binary, abort_on_error=False
+            tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
         )
 
         # process the events
@@ -626,7 +626,7 @@ class TestConstraintsEvents:
         binary = b"".join(b for b in Binary.unmarshal(events=events))
 
         events_generator = Binary.marshal(
-            tpm_type=CommandResponseStream, buffer=binary, abort_on_error=False
+            tpm_type=CommandResponseStream, buffer=binary, abort_on_error=True
         )
 
         # process the events
@@ -647,7 +647,7 @@ class TestConstraintsEvents:
         binary = binary[:-1]
 
         events_generator = Binary.marshal(
-            tpm_type=CommandResponseStream, buffer=binary, abort_on_error=False
+            tpm_type=CommandResponseStream, buffer=binary, abort_on_error=True
         )
 
         # process the events
@@ -664,7 +664,7 @@ class TestConstraintsEvents:
         startup_binary = b"".join(b for b in Binary.unmarshal(events=startup_events))
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=startup_binary, abort_on_error=False
+            tpm_type=Command, buffer=startup_binary, abort_on_error=True
         )
 
         with pytest.raises(ValueConstraintViolatedError) as exc_info:
@@ -685,7 +685,7 @@ class TestConstraintsEvents:
         startup_binary = b"".join(b for b in Binary.unmarshal(events=startup_events))
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=startup_binary, abort_on_error=False
+            tpm_type=Command, buffer=startup_binary, abort_on_error=True
         )
 
         with pytest.raises(SizeConstraintViolatedError) as exc_info:
@@ -711,7 +711,7 @@ class TestConstraintsEvents:
         startup_binary = b"".join(b for b in Binary.unmarshal(events=startup_events))
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=startup_binary, abort_on_error=False
+            tpm_type=Command, buffer=startup_binary, abort_on_error=True
         )
 
         with pytest.raises(SizeConstraintViolatedError) as exc_info:
@@ -733,7 +733,7 @@ class TestConstraintsEvents:
         startup_binary = startup_binary[:-1]
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=startup_binary, abort_on_error=False
+            tpm_type=Command, buffer=startup_binary, abort_on_error=True
         )
 
         with pytest.raises(InputStreamBytesDepletedError) as exc_info:
@@ -751,7 +751,7 @@ class TestConstraintsEvents:
         startup_binary = startup_binary + superfluous_bytes
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=startup_binary, abort_on_error=False
+            tpm_type=Command, buffer=startup_binary, abort_on_error=True
         )
 
         with pytest.raises(InputStreamSuperfluousBytesError) as exc_info:
@@ -761,90 +761,90 @@ class TestConstraintsEvents:
         assert exc_info.value.command_code == startup_command.commandCode
         assert exc_info.value.bytes_remaining == superfluous_bytes
 
-    # def test_invalid_selector(self):
-    #     create_primary_sym_command_wrong = copy.deepcopy(create_primary_sym_command)
-    #     create_primary_sym_command_wrong.parameters.inPublic.publicArea.parameters.symDetail.sym.algorithm._value = (
-    #         TPM_ALG.ERROR
-    #     )
+    def test_invalid_selector(self):
+        create_primary_sym_command_wrong = copy.deepcopy(create_primary_sym_command)
+        create_primary_sym_command_wrong.parameters.inPublic.publicArea.parameters.symDetail.sym.algorithm._value = (
+            TPM_ALG.ERROR
+        )
 
-    #     create_primary_events = obj_to_events(create_primary_sym_command_wrong)
-    #     create_primary_binary = b"".join(
-    #         b for b in Binary.unmarshal(events=create_primary_events)
-    #     )
+        create_primary_events = obj_to_events(create_primary_sym_command_wrong)
+        create_primary_binary = b"".join(
+            b for b in Binary.unmarshal(events=create_primary_events)
+        )
 
-    #     events_generator = Binary.marshal(
-    #         tpm_type=Command, buffer=create_primary_binary, abort_on_error=False
-    #     )
+        events_generator = Binary.marshal(
+            tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
+        )
 
-    #     with pytest.raises(ValueConstraintViolatedError) as exc_info:
-    #         # process the events
-    #         list(events_generator)
+        with pytest.raises(ValueConstraintViolatedError) as exc_info:
+            # process the events
+            list(events_generator)
 
-    #     assert exc_info.value.constraint.tpm_type is TPMI_ALG_SYM_OBJECT
-    #     assert exc_info.value.constraint.constraint_path == Path.from_string(
-    #         ".parameters.inPublic.publicArea.parameters.symDetail.sym.algorithm"
-    #     )
-    #     assert exc_info.value.value == TPM_ALG.ERROR
-    #     assert set(exc_info.value.constraint.valid_values) == set(
-    #         TPMI_ALG_SYM_OBJECT._valid_values
-    #     )
+        assert exc_info.value.constraint.tpm_type is TPMI_ALG_SYM_OBJECT
+        assert exc_info.value.constraint.constraint_path == Path.from_string(
+            ".parameters.inPublic.publicArea.parameters.symDetail.sym.algorithm"
+        )
+        assert exc_info.value.value == TPM_ALG.ERROR
+        assert set(exc_info.value.constraint.valid_values) == set(
+            TPMI_ALG_SYM_OBJECT._valid_values
+        )
 
-    #     # TODO assert remaining bytes
+        # TODO assert remaining bytes
 
-    # def test_invalid_value(self):
-    #     create_primary_command_wrong = copy.deepcopy(create_primary_sym_command)
-    #     create_primary_command_wrong.parameters.inPublic.publicArea.nameAlg._value = (
-    #         TPM_ALG.ERROR
-    #     )
+    def test_invalid_value(self):
+        create_primary_command_wrong = copy.deepcopy(create_primary_sym_command)
+        create_primary_command_wrong.parameters.inPublic.publicArea.nameAlg._value = (
+            TPM_ALG.ERROR
+        )
 
-    #     create_primary_events = obj_to_events(create_primary_command_wrong)
-    #     create_primary_binary = b"".join(
-    #         b for b in Binary.unmarshal(events=create_primary_events)
-    #     )
+        create_primary_events = obj_to_events(create_primary_command_wrong)
+        create_primary_binary = b"".join(
+            b for b in Binary.unmarshal(events=create_primary_events)
+        )
 
-    #     events_generator = Binary.marshal(
-    #         tpm_type=Command, buffer=create_primary_binary, abort_on_error=False
-    #     )
+        events_generator = Binary.marshal(
+            tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
+        )
 
-    #     with pytest.raises(ValueConstraintViolatedError) as exc_info:
-    #         # process the events
-    #         list(events_generator)
+        with pytest.raises(ValueConstraintViolatedError) as exc_info:
+            # process the events
+            list(events_generator)
 
-    #     assert exc_info.value.constraint.tpm_type is TPMI_ALG_HASH
-    #     assert exc_info.value.constraint.constraint_path == Path.from_string(
-    #         ".parameters.inPublic.publicArea.nameAlg"
-    #     )
-    #     assert exc_info.value.value == TPM_ALG.ERROR
-    #     assert set(exc_info.value.constraint.valid_values) == set(
-    #         TPMI_ALG_HASH._valid_values
-    #     )
+        assert exc_info.value.constraint.tpm_type is TPMI_ALG_HASH
+        assert exc_info.value.constraint.constraint_path == Path.from_string(
+            ".parameters.inPublic.publicArea.nameAlg"
+        )
+        assert exc_info.value.value == TPM_ALG.ERROR
+        assert set(exc_info.value.constraint.valid_values) == set(
+            TPMI_ALG_HASH._valid_values
+        )
 
-    #     # TODO assert remaining bytes
+        # TODO assert remaining bytes
 
-    # def test_invalid_value_different_type(self):
-    #     startup_command_wrong = copy.deepcopy(startup_command)
-    #     startup_command_wrong.parameters.startupType._value = 42
+    def test_invalid_value_different_type(self):
+        startup_command_wrong = copy.deepcopy(startup_command)
+        startup_command_wrong.parameters.startupType._value = 42
 
-    #     startup_command_events = obj_to_events(startup_command_wrong)
-    #     startup_command_binary = b"".join(
-    #         b for b in Binary.unmarshal(events=startup_command_events)
-    #     )
+        startup_command_events = obj_to_events(startup_command_wrong)
+        startup_command_binary = b"".join(
+            b for b in Binary.unmarshal(events=startup_command_events)
+        )
 
-    #     events_generator = Binary.marshal(
-    #         tpm_type=Command, buffer=startup_command_binary, abort_on_error=False
-    #     )
+        events_generator = Binary.marshal(
+            tpm_type=Command, buffer=startup_command_binary, abort_on_error=True
+        )
 
-    #     with pytest.raises(ValueConstraintViolatedError) as exc_info:
-    #         # process the events
-    #         list(events_generator)
+        with pytest.raises(ValueConstraintViolatedError) as exc_info:
+            # process the events
+            list(events_generator)
 
-    #     assert exc_info.value.constraint.tpm_type is TPM_SU
-    #     assert exc_info.value.constraint.constraint_path == Path.from_string(
-    #         ".parameters.startupType"
-    #     )
-    #     assert exc_info.value.value == TPM_SU(42)
-    #     assert set(exc_info.value.constraint.valid_values) == set(TPM_SU)
-    #     assert bytes(exc_info.value.bytes_remaining) == b""
+        assert exc_info.value.constraint.tpm_type is TPM_SU
+        assert exc_info.value.constraint.constraint_path == Path.from_string(
+            ".parameters.startupType"
+        )
+        assert exc_info.value.value == TPM_SU(42)
+        assert set(exc_info.value.constraint.valid_values) == set(TPM_SU)
+        assert bytes(exc_info.value.bytes_remaining) == b""
 
     def test_tpm2b_size_exhausted_before_done_parsing_body(self):
         size_too_short_by_bytes = 1
@@ -860,7 +860,7 @@ class TestConstraintsEvents:
         )
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=create_primary_binary, abort_on_error=False
+            tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
         )
 
         with pytest.raises(SizeConstraintViolatedError) as exc_info:
@@ -918,7 +918,7 @@ class TestConstraintsEvents:
         )
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=create_primary_binary, abort_on_error=False
+            tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
         )
 
         with pytest.raises(SizeConstraintViolatedError) as exc_info:
@@ -970,7 +970,7 @@ class TestConstraintsEvents:
         )
 
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=create_primary_binary, abort_on_error=False
+            tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
         )
 
         with pytest.raises(SizeConstraintViolatedError) as exc_info:
