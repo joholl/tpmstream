@@ -7,6 +7,8 @@ from ...common.error import (
     ConstraintViolatedError,
     InputStreamBytesDepletedError,
     InputStreamSuperfluousBytesError,
+    SizeConstraintExceededError,
+    SizeConstraintSubceededError,
     ValueConstraintViolatedError,
 )
 from ...common.event import MarshalEvent, Path, WarningEvent
@@ -15,6 +17,11 @@ from ...common.util import is_list
 from ...spec.commands import Command, CommandResponseStream, Response
 from ...spec.common.values import ValidValues
 from ...spec.structures.constants import TPM_CC, TPM_RC, TPM_ST
+
+
+def consule_bytes(count):
+    for _ in range(count):
+        _ = yield
 
 
 def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=True):
@@ -139,9 +146,7 @@ def process_primitive(tpm_type, path, size_constraints=None, abort_on_error=True
     for _ in range(size):
         # before we consume byte, we need to check if we would violate any of the size constraints
         if size_constraints is not None:
-            yield from size_constraints.bytes_parsed(
-                path, 1, abort_on_error=abort_on_error
-            )
+            yield from size_constraints.bytes_parsed(path, 1)
 
         byte = yield None
         data.append(byte)
@@ -159,7 +164,7 @@ def process_primitive(tpm_type, path, size_constraints=None, abort_on_error=True
     assert none is None
 
     if not value_typed.is_valid() and not abort_on_error:
-        none = yield WarningEvent(cause=event, constraint=None)
+        none = yield WarningEvent(cause=event, constraint=value_constraint)
         assert none is None
 
     return size, value
@@ -189,7 +194,11 @@ def process_array(tpm_type, path, count, size_constraints=None, abort_on_error=T
 def process_byte_sized_array(
     tpm_type, path, array_size_constraint, size_constraints=None, abort_on_error=True
 ):
-    """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
+    """
+    Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents.
+    Assumes that whatever amount of bytes is left in array_size_constraint is meant for the array.
+    Ensures that array_size_constraint is not violated.
+    """
     assert len(tpm_type.__args__) == 1
     element_type = tpm_type.__args__[0]
 
@@ -200,15 +209,33 @@ def process_byte_sized_array(
     index = 0
     while array_size_constraint.size_already < array_size_constraint.size_max:
         child_node = path[-1].with_index(index)
-        _element_size, _ = yield from process(
-            element_type,
-            parent_path / child_node,
-            size_constraints=size_constraints,
-            abort_on_error=abort_on_error,
-        )
+        try:
+            _element_size, _ = yield from process(
+                element_type,
+                parent_path / child_node,
+                size_constraints=size_constraints,
+                abort_on_error=abort_on_error,
+            )
+        except SizeConstraintExceededError as error:
+            if abort_on_error or error.constraint != array_size_constraint:
+                raise error
+            # TODO raise WarningEvent
+            size_constraints.remove(array_size_constraint)
+            return array_size_constraint.size_already, None
+
         index += 1
 
-    array_size_constraint.assert_done()
+    try:
+        array_size_constraint.assert_done()
+    except SizeConstraintSubceededError as error:
+        if abort_on_error:
+            raise error
+        # TODO raise WarningEvent
+        size_constraints.remove(array_size_constraint)
+        yield from consule_bytes(
+            array_size_constraint.size_max - array_size_constraint.size_already
+        )
+
     return array_size_constraint.size_already, None
 
 
@@ -267,10 +294,11 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
         size_constraints=size_constraints,
         abort_on_error=abort_on_error,
     )
-    # anticipate size constraint violation (e.g. commandSize) based on tpm2b size
-    yield from size_constraints.bytes_parsed(
-        size_path, buffer_size_exp, anticipate_only=True
-    )
+    # TODO warning event here?
+    # # anticipate size constraint violation (e.g. commandSize) based on tpm2b size
+    # yield from size_constraints.bytes_parsed(
+    #     size_path, buffer_size_exp, anticipate_only=True
+    # )
 
     if is_list(buffer_field.type):
         # common tpm2b with byte buffer
@@ -281,28 +309,46 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
             size_constraints=size_constraints,
             abort_on_error=abort_on_error,
         )
-    else:
-        # buffer represents single complex type, count is number of bytes
-        if buffer_size_exp == 0:
-            none = yield MarshalEvent(
-                path / PathNode(buffer_field.name), buffer_field.type, ...
-            )
-            assert none is None
-            buffer_size = 0
-        else:
-            tpm2b_size_constraint = SizeConstraint(
-                constraint_path=size_path, size_max=buffer_size_exp
-            )
-            size_constraints.append(tpm2b_size_constraint)
+        return size_size + buffer_size, None
 
-            buffer_size, _ = yield from process(
-                buffer_field.type,
-                path / PathNode(buffer_field.name),
-                size_constraints=size_constraints,
-                abort_on_error=abort_on_error,
-            )
+    # buffer represents single complex type, count is number of bytes
+    if buffer_size_exp == 0:
+        none = yield MarshalEvent(
+            path / PathNode(buffer_field.name), buffer_field.type, ...
+        )
+        assert none is None
+        return size_size, None
 
-            tpm2b_size_constraint.assert_done()
+    tpm2b_size_constraint = SizeConstraint(
+        constraint_path=size_path, size_max=buffer_size_exp
+    )
+    size_constraints.append(tpm2b_size_constraint)
+
+    try:
+        buffer_size, _ = yield from process(
+            buffer_field.type,
+            path / PathNode(buffer_field.name),
+            size_constraints=size_constraints,
+            abort_on_error=abort_on_error,
+        )
+    except SizeConstraintExceededError as error:
+        if abort_on_error or error.constraint != tpm2b_size_constraint:
+            raise error
+        # TODO raise WarningEvent
+        size_constraints.remove(tpm2b_size_constraint)
+        return size_size + tpm2b_size_constraint.size_already, None
+
+    try:
+        tpm2b_size_constraint.assert_done()
+    except SizeConstraintSubceededError as error:
+        if abort_on_error:
+            raise error
+        # TODO raise WarningEvent
+        yield from consule_bytes(
+            tpm2b_size_constraint.size_max - tpm2b_size_constraint.size_already
+        )
+        size_constraints.remove(tpm2b_size_constraint)
+        buffer_size = tpm2b_size_constraint.size_already
 
     return size_size + buffer_size, None
 
@@ -406,15 +452,25 @@ def process_command(path, abort_on_error=True):
                     value=selector_value,
                 ) from error
 
+        element_path = path / PathNode(field.name)
+        array_size_constraint = None
         if field.name == "authorizationArea":
+            array_size_constraint = authorization_area_constraint
+        try:
             element_size, element_value = yield from process(
                 field_type,
-                path / PathNode(field.name),
-                array_size_constraint=authorization_area_constraint,
+                element_path,
+                array_size_constraint=array_size_constraint,
                 size_constraints=size_constraints,
                 abort_on_error=abort_on_error,
             )
             size += element_size
+        except SizeConstraintExceededError as error:
+            if abort_on_error or error.constraint != command_size_constraint:
+                raise error
+            # TODO raise WarningEvent
+            size_constraints.remove(command_size_constraint)
+            return values["commandSize"], values["commandCode"]
 
         if field.name == "commandSize":
             command_size_constraint.set_constraint(
@@ -428,7 +484,19 @@ def process_command(path, abort_on_error=True):
 
         values[field.name] = element_value
 
-    command_size_constraint.assert_done()
+    try:
+        command_size_constraint.assert_done()
+    except SizeConstraintSubceededError as error:
+        if abort_on_error:
+            raise error
+        # TODO raise WarningEvent
+        yield from consule_bytes(
+            command_size_constraint.size_max - command_size_constraint.size_already
+        )
+        size_constraints.remove(array_size_constraint)
+        return values["commandSize"], values["commandCode"]
+
+    # as a sanity check - all size_constraints should be handled explicitly by now
     size_constraints.assert_done()
     return size, values["commandCode"]
 
@@ -480,29 +548,29 @@ def process_response(path, command_code, abort_on_error=True):
                     value=command_code,
                 ) from error
 
+        element_path = path / PathNode(field.name)
+        array_size_constraint = None
         if field.name == "authorizationArea":
-            # authorizationArea is a list with 1-n elements (remaining bytes)
-            element_size, element_value = yield from process(
-                field_type,
-                path / PathNode(field.name),
-                array_size_constraint=response_size_constraint,
-                size_constraints=size_constraints,
-                abort_on_error=abort_on_error,
-            )
-            size += element_size
-        else:
-            # all other members
-            element_path = path / PathNode(field.name)
+            array_size_constraint = response_size_constraint
+        try:
             element_size, element_value = yield from process(
                 field_type,
                 element_path,
+                array_size_constraint=array_size_constraint,
                 size_constraints=size_constraints,
                 abort_on_error=abort_on_error,
             )
             size += element_size
+        except SizeConstraintExceededError as error:
+            if abort_on_error or error.constraint != response_size_constraint:
+                raise error
+            # TODO raise WarningEvent
+            size_constraints.remove(response_size_constraint)
+            return values["responseSize"], None
 
-            if field.name == "parameters" and "parameterSize" in values:
-                parameter_size_constraint.assert_done()
+        if field.name == "parameters" and "parameterSize" in values:
+            # TODO try except here -> handle subceeded error
+            parameter_size_constraint.assert_done()
 
         if field.name == "responseSize":
             response_size_constraint.set_constraint(
@@ -516,7 +584,19 @@ def process_response(path, command_code, abort_on_error=True):
 
         values[field.name] = element_value
 
-    response_size_constraint.assert_done()
+    try:
+        response_size_constraint.assert_done()
+    except SizeConstraintSubceededError as error:
+        if abort_on_error:
+            raise error
+        # TODO raise WarningEvent
+        yield from consule_bytes(
+            response_size_constraint.size_max - response_size_constraint.size_already
+        )
+        size_constraints.remove(array_size_constraint)
+        return values["responseSize"], None
+
+    # as a sanity check - all size_constraints should be handled explicitly by now
     size_constraints.assert_done()
     return size, None
 

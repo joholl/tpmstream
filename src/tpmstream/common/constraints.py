@@ -1,4 +1,8 @@
-from tpmstream.common.error import ConstraintObsoleteError, SizeConstraintViolatedError
+from tpmstream.common.error import (
+    ConstraintObsoleteError,
+    SizeConstraintExceededError,
+    SizeConstraintSubceededError,
+)
 from tpmstream.common.path import Path
 from tpmstream.spec.common.values import ValidValues
 
@@ -35,14 +39,16 @@ class SizeConstraint(Constraint):
         self.constraint_path = constraint_path
         self.size_max = size_max
 
-    def bytes_parsed(self, path, size, anticipate_only=False, abort_on_error=True):
+    def bytes_parsed(self, path, size, anticipate_only=False):
         """Add to the size of parsed bytes."""
         if self.is_obsolete:
             raise ConstraintObsoleteError()
 
         # look ahead (so self.size_already is the number of parsed bytes)
         if self.size_max is not None and self.size_already + size > self.size_max:
-            raise SizeConstraintViolatedError(self, violator_path=path)
+            raise SizeConstraintExceededError(
+                self, violator_path=path, violator_value=size
+            )
 
         if not anticipate_only:
             self.size_already += size
@@ -56,16 +62,19 @@ class SizeConstraint(Constraint):
         ), "Cannot assert the end of a constraint before having initialized it."
 
         if self.size_already != self.size_max:
-            raise SizeConstraintViolatedError(self)
+            raise SizeConstraintSubceededError(self)
 
         self.is_obsolete = True
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.constraint_path}: {self.size_already}/{self.size_max})"
 
 
 class SizeConstraintList(list[SizeConstraint]):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def bytes_parsed(self, path, size, anticipate_only=False, abort_on_error=True):
+    def bytes_parsed(self, path, size, anticipate_only=False):
         # TODO always in order from deepest to highest
         for constraint in self.copy():
             try:
@@ -73,7 +82,6 @@ class SizeConstraintList(list[SizeConstraint]):
                     path,
                     size,
                     anticipate_only=anticipate_only,
-                    abort_on_error=abort_on_error,
                 )
             except ConstraintObsoleteError:
                 self.remove(constraint)
