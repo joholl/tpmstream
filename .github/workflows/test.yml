@@ -2,7 +2,7 @@ name: CI
 on: [push]
 
 jobs:
-  tests:
+  pytest:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -28,6 +28,35 @@ jobs:
 
       - name: Test
         run: python -m pytest
+
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: 'true'
+
+      - name: Install dependencies
+        run: sudo apt install -y libpcap-dev bats
+
+      - uses: actions/setup-python@v3
+
+      - uses: syphar/restore-virtualenv@v1
+        id: cache-virtualenv
+        # looks for changes in requirements.txt
+        with:
+          requirement_files: requirements.txt
+
+      - uses: syphar/restore-pip-download-cache@v1
+        if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+
+        # the package installation will only be executed when the
+        # requirements-files have changed.
+      - run: pip install .; pip install pytest autoflake black isort
+        #if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+
+      - name: Test
+        run: bats test/*.bats
 
   linters:
     runs-on: ubuntu-latest

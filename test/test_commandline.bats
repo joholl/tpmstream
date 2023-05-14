@@ -18,7 +18,7 @@ create_primary_bin="$(printf '80020000007700000131400000010000003d02000000001455
   assert_success
   assert_output --partial "usage:"
   assert_output --partial "positional arguments:"
-  assert_output --partial "optional arguments:"
+  assert_output --regexp "option(al argument)?s:"
 }
 
 @test "Doc example: convert CreatePrimary via pipe." {
