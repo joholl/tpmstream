@@ -29,16 +29,9 @@ create_primary_bin="$(printf '80020000007700000131400000010000003d02000000001455
   assert_output --regexp ".pcrSelections\s*$"
 }
 
-@test "Examples for CreatePrimary." {
-  run tpmstream example CreatePrimary
+@test "Convert TPM2B_IV." {
+  run tpmstream convert --type TPM2B_IV --in=binary - < <(printf "\x00\x03ABC")
   assert_success
-  assert_output --regexp "^Command"
-  assert_output --regexp ".pcrSelections\s*$"
+  assert_output --regexp "^TPM2B_IV"
+  assert_output --regexp ".buffer\s*414243\s*ABC$"
 }
-
-#@test "Examples for CreatePrimary." {
-#  run printf "0002AABB" | xxd -r -p | tpmstream convert --type TPM2B_IV --in=binary -
-#  assert_success
-#  assert_output --regexp "^Command"
-#  assert_output --regexp ".pcrSelections\s*$"
-#}
