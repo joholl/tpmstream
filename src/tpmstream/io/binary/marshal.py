@@ -186,6 +186,32 @@ def process_array(tpm_type, path, count, size_constraints=None, abort_on_error=T
     return element_size * count, None
 
 
+def process_byte_sized_array(
+    tpm_type, path, array_size_constraint, size_constraints=None, abort_on_error=True
+):
+    """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
+    assert len(tpm_type.__args__) == 1
+    element_type = tpm_type.__args__[0]
+
+    none = yield MarshalEvent(path, list[element_type], ...)
+    assert none is None
+
+    parent_path = path[:-1]
+    index = 0
+    while array_size_constraint.size_already < array_size_constraint.size_max:
+        child_node = path[-1].with_index(index)
+        _element_size, _ = yield from process(
+            element_type,
+            parent_path / child_node,
+            size_constraints=size_constraints,
+            abort_on_error=abort_on_error,
+        )
+        index += 1
+
+    array_size_constraint.assert_done()
+    return array_size_constraint.size_already, None
+
+
 def process_tpms(tpm_type, path, size_constraints=None, abort_on_error=True):
     """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
     none = yield MarshalEvent(path, tpm_type, ...)
@@ -241,7 +267,7 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
         size_constraints=size_constraints,
         abort_on_error=abort_on_error,
     )
-    # anticipate size constrain violation (e.g. commandSize) based on tpm2b size
+    # anticipate size constraint violation (e.g. commandSize) based on tpm2b size
     yield from size_constraints.bytes_parsed(
         size_path, buffer_size_exp, anticipate_only=True
     )
@@ -381,30 +407,10 @@ def process_command(path, abort_on_error=True):
                 ) from error
 
         if field.name == "authorizationArea":
-            # authorizationArea is a list with 1..n elements (authSize is size in bytes)
-            authorization_area_type = field_type.__args__[0]
-            none = yield MarshalEvent(path / PathNode(field.name), field_type, ...)
-            assert none is None
-
-            authorization_area_size_so_far = 0
-            index = 0
-            while authorization_area_size_so_far < values["authSize"]:
-                authorization_area_size, _ = yield from process(
-                    authorization_area_type,
-                    path / PathNode(field.name, index),
-                    size_constraints=size_constraints,
-                    abort_on_error=abort_on_error,
-                )
-                authorization_area_size_so_far += authorization_area_size
-                index += 1
-            authorization_area_constraint.assert_done()
-            size += authorization_area_size_so_far
-        else:
-            # all other members
-            element_path = path / PathNode(field.name)
             element_size, element_value = yield from process(
                 field_type,
-                element_path,
+                path / PathNode(field.name),
+                array_size_constraint=authorization_area_constraint,
                 size_constraints=size_constraints,
                 abort_on_error=abort_on_error,
             )
@@ -476,22 +482,14 @@ def process_response(path, command_code, abort_on_error=True):
 
         if field.name == "authorizationArea":
             # authorizationArea is a list with 1-n elements (remaining bytes)
-            authorization_area_type = field_type.__args__[0]
-            none = yield MarshalEvent(path / PathNode(field.name), field_type, ...)
-            assert none is None
-
-            authorization_area_size_so_far = 0
-            index = 0
-            while authorization_area_size_so_far < values["responseSize"] - size:
-                authorization_area_size, _ = yield from process(
-                    authorization_area_type,
-                    path / PathNode(field.name, index),
-                    size_constraints=size_constraints,
-                    abort_on_error=abort_on_error,
-                )
-                authorization_area_size_so_far += authorization_area_size
-                index += 1
-            size += authorization_area_size_so_far
+            element_size, element_value = yield from process(
+                field_type,
+                path / PathNode(field.name),
+                array_size_constraint=response_size_constraint,
+                size_constraints=size_constraints,
+                abort_on_error=abort_on_error,
+            )
+            size += element_size
         else:
             # all other members
             element_path = path / PathNode(field.name)
@@ -543,6 +541,7 @@ def process(
     selector=None,
     count=None,
     command_code=None,
+    array_size_constraint=None,
     size_constraints=None,
     abort_on_error=True,
 ):
@@ -584,8 +583,17 @@ def process(
             size_constraints=size_constraints,
             abort_on_error=abort_on_error,
         )
+    elif is_list(tpm_type) and array_size_constraint is not None:
+        # list[...] with size in bytes
+        result = yield from process_byte_sized_array(
+            tpm_type,
+            path,
+            array_size_constraint=array_size_constraint,
+            size_constraints=size_constraints,
+            abort_on_error=abort_on_error,
+        )
     elif is_list(tpm_type):
-        # list[...]
+        # list[...] with count of elements
         result = yield from process_array(
             tpm_type,
             path,
