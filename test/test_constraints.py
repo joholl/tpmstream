@@ -6,7 +6,8 @@ import pytest
 from tpmstream.common.error import (
     InputStreamBytesDepletedError,
     InputStreamSuperfluousBytesError,
-    SizeConstraintViolatedError,
+    SizeConstraintExceededError,
+    SizeConstraintSubceededError,
     ValueConstraintViolatedError,
 )
 from tpmstream.common.event import Path
@@ -269,7 +270,7 @@ class TestConstraintsExceptions:
 
         events_generator = Binary.marshal(tpm_type=Command, buffer=startup_binary)
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintExceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -293,7 +294,7 @@ class TestConstraintsExceptions:
 
         events_generator = Binary.marshal(tpm_type=Command, buffer=startup_binary)
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintSubceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -303,7 +304,6 @@ class TestConstraintsExceptions:
         assert exc_info.value.constraint.size_already == len(startup_binary)
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
         assert not exc_info.value.constraint.is_obsolete
-        assert exc_info.value.violator_path is None
 
     def test_input_exhausted_before_done_parsing(self):
         startup_events = obj_to_events(startup_command)
@@ -438,7 +438,7 @@ class TestConstraintsExceptions:
             tpm_type=Command, buffer=create_primary_binary
         )
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintExceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -496,7 +496,7 @@ class TestConstraintsExceptions:
             tpm_type=Command, buffer=create_primary_binary
         )
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintSubceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -528,61 +528,62 @@ class TestConstraintsExceptions:
         remaining_fields_bytes = b"".join(b for b in Binary.unmarshal(events))
         assert bytes(exc_info.value.bytes_remaining) == remaining_fields_bytes
 
-    def test_tpm2b_anticipate_command_size_exhausted_before_done_parsing(self):
-        create_primary_command_wrong = copy.deepcopy(create_primary_command)
-        creation_pcr_events = obj_to_events(
-            create_primary_command_wrong.parameters.creationPCR
-        )
-        creation_pcr_bytes = b"".join(b for b in Binary.unmarshal(creation_pcr_events))
-        # size is so long, that it would overshoot command_size by 1 byte when parsing
-        size_too_long_by_bytes = len(creation_pcr_bytes) + 1
-        create_primary_command_wrong.parameters.outsideInfo.size._value += (
-            size_too_long_by_bytes
-        )
-        create_primary_events = obj_to_events(create_primary_command_wrong)
-        create_primary_binary = b"".join(
-            b for b in Binary.unmarshal(events=create_primary_events)
-        )
-
-        events_generator = Binary.marshal(
-            tpm_type=Command, buffer=create_primary_binary
-        )
-
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
-            # process the events
-            list(events_generator)
-
-        assert exc_info.value.constraint.constraint_path == Path.from_string(
-            ".commandSize"
-        )
-        assert not exc_info.value.constraint.is_obsolete
-        assert (
-            exc_info.value.constraint.size_already
-            + create_primary_command_wrong.parameters.outsideInfo.size._value
-            == create_primary_command_wrong.commandSize + 1
-        )
-        assert (
-            exc_info.value.constraint.size_max
-            == create_primary_command_wrong.commandSize
-        )
-        assert exc_info.value.violator_path == Path.from_string(
-            ".parameters.outsideInfo.size"
-        )
-
-        # remaining bytes everything after the offending size field
-        outside_info_events = obj_to_events(
-            create_primary_command_wrong.parameters.outsideInfo.buffer
-        )
-        creation_pcr_events = obj_to_events(
-            create_primary_command_wrong.parameters.creationPCR
-        )
-        events = itertools.chain(
-            outside_info_events,
-            creation_pcr_events,
-        )
-        remaining_fields_bytes = b"".join(b for b in Binary.unmarshal(events))
-
-        assert bytes(exc_info.value.bytes_remaining) == remaining_fields_bytes
+    # TODO Feature commented out now
+    # def test_tpm2b_anticipate_command_size_exhausted_before_done_parsing(self):
+    #     create_primary_command_wrong = copy.deepcopy(create_primary_command)
+    #     creation_pcr_events = obj_to_events(
+    #         create_primary_command_wrong.parameters.creationPCR
+    #     )
+    #     creation_pcr_bytes = b"".join(b for b in Binary.unmarshal(creation_pcr_events))
+    #     # size is so long, that it would overshoot command_size by 1 byte when parsing
+    #     size_too_long_by_bytes = len(creation_pcr_bytes) + 1
+    #     create_primary_command_wrong.parameters.outsideInfo.size._value += (
+    #         size_too_long_by_bytes
+    #     )
+    #     create_primary_events = obj_to_events(create_primary_command_wrong)
+    #     create_primary_binary = b"".join(
+    #         b for b in Binary.unmarshal(events=create_primary_events)
+    #     )
+    #
+    #     events_generator = Binary.marshal(
+    #         tpm_type=Command, buffer=create_primary_binary
+    #     )
+    #
+    #     with pytest.raises(SizeConstraintExceededError) as exc_info:
+    #         # process the events
+    #         list(events_generator)
+    #
+    #     assert exc_info.value.constraint.constraint_path == Path.from_string(
+    #         ".commandSize"
+    #     )
+    #     assert not exc_info.value.constraint.is_obsolete
+    #     assert (
+    #         exc_info.value.constraint.size_already
+    #         + create_primary_command_wrong.parameters.outsideInfo.size._value
+    #         == create_primary_command_wrong.commandSize + 1
+    #     )
+    #     assert (
+    #         exc_info.value.constraint.size_max
+    #         == create_primary_command_wrong.commandSize
+    #     )
+    #     assert exc_info.value.violator_path == Path.from_string(
+    #         ".parameters.outsideInfo.size"
+    #     )
+    #
+    #     # remaining bytes everything after the offending size field
+    #     outside_info_events = obj_to_events(
+    #         create_primary_command_wrong.parameters.outsideInfo.buffer
+    #     )
+    #     creation_pcr_events = obj_to_events(
+    #         create_primary_command_wrong.parameters.creationPCR
+    #     )
+    #     events = itertools.chain(
+    #         outside_info_events,
+    #         creation_pcr_events,
+    #     )
+    #     remaining_fields_bytes = b"".join(b for b in Binary.unmarshal(events))
+    #
+    #     assert bytes(exc_info.value.bytes_remaining) == remaining_fields_bytes
 
 
 class TestConstraintsEvents:
@@ -688,7 +689,7 @@ class TestConstraintsEvents:
             tpm_type=Command, buffer=startup_binary, abort_on_error=True
         )
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintExceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -714,7 +715,7 @@ class TestConstraintsEvents:
             tpm_type=Command, buffer=startup_binary, abort_on_error=True
         )
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintSubceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -724,7 +725,6 @@ class TestConstraintsEvents:
         assert exc_info.value.constraint.size_already == len(startup_binary)
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
         assert not exc_info.value.constraint.is_obsolete
-        assert exc_info.value.violator_path is None
 
     def test_input_exhausted_before_done_parsing(self):
         startup_events = obj_to_events(startup_command)
@@ -863,7 +863,7 @@ class TestConstraintsEvents:
             tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
         )
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintExceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -921,7 +921,7 @@ class TestConstraintsEvents:
             tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
         )
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
+        with pytest.raises(SizeConstraintSubceededError) as exc_info:
             # process the events
             list(events_generator)
 
@@ -953,58 +953,117 @@ class TestConstraintsEvents:
         remaining_fields_bytes = b"".join(b for b in Binary.unmarshal(events))
         assert bytes(exc_info.value.bytes_remaining) == remaining_fields_bytes
 
-    def test_tpm2b_anticipate_command_size_exhausted_before_done_parsing(self):
-        create_primary_command_wrong = copy.deepcopy(create_primary_command)
-        creation_pcr_events = obj_to_events(
-            create_primary_command_wrong.parameters.creationPCR
-        )
-        creation_pcr_bytes = b"".join(b for b in Binary.unmarshal(creation_pcr_events))
-        # size is so long, that it would overshoot command_size by 1 byte when parsing
-        size_too_long_by_bytes = len(creation_pcr_bytes) + 1
-        create_primary_command_wrong.parameters.outsideInfo.size._value += (
-            size_too_long_by_bytes
-        )
-        create_primary_events = obj_to_events(create_primary_command_wrong)
-        create_primary_binary = b"".join(
-            b for b in Binary.unmarshal(events=create_primary_events)
-        )
+    # TODO Feature commented out now
+    # def test_tpm2b_anticipate_command_size_exhausted_before_done_parsing(self):
+    #     create_primary_command_wrong = copy.deepcopy(create_primary_command)
+    #     creation_pcr_events = obj_to_events(
+    #         create_primary_command_wrong.parameters.creationPCR
+    #     )
+    #     creation_pcr_bytes = b"".join(b for b in Binary.unmarshal(creation_pcr_events))
+    #     # size is so long, that it would overshoot command_size by 1 byte when parsing
+    #     size_too_long_by_bytes = len(creation_pcr_bytes) + 1
+    #     create_primary_command_wrong.parameters.outsideInfo.size._value += (
+    #         size_too_long_by_bytes
+    #     )
+    #     create_primary_events = obj_to_events(create_primary_command_wrong)
+    #     create_primary_binary = b"".join(
+    #         b for b in Binary.unmarshal(events=create_primary_events)
+    #     )
+    #
+    #     events_generator = Binary.marshal(
+    #         tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
+    #     )
+    #
+    #     with pytest.raises(SizeConstraintExceededError) as exc_info:
+    #         # process the events
+    #         list(events_generator)
+    #
+    #     assert exc_info.value.constraint.constraint_path == Path.from_string(
+    #         ".commandSize"
+    #     )
+    #     assert not exc_info.value.constraint.is_obsolete
+    #     assert (
+    #         exc_info.value.constraint.size_already
+    #         + create_primary_command_wrong.parameters.outsideInfo.size._value
+    #         == create_primary_command_wrong.commandSize + 1
+    #     )
+    #     assert (
+    #         exc_info.value.constraint.size_max
+    #         == create_primary_command_wrong.commandSize
+    #     )
+    #     assert exc_info.value.violator_path == Path.from_string(
+    #         ".parameters.outsideInfo.size"
+    #     )
+    #
+    #     # remaining bytes everything after the offending size field
+    #     outside_info_events = obj_to_events(
+    #         create_primary_command_wrong.parameters.outsideInfo.buffer
+    #     )
+    #     creation_pcr_events = obj_to_events(
+    #         create_primary_command_wrong.parameters.creationPCR
+    #     )
+    #     events = itertools.chain(
+    #         outside_info_events,
+    #         creation_pcr_events,
+    #     )
+    #     remaining_fields_bytes = b"".join(b for b in Binary.unmarshal(events))
+    #
+    #     assert bytes(exc_info.value.bytes_remaining) == remaining_fields_bytes
 
+
+class TestSizeConstraintsEvents:
+    def test_tpm2b_size_success(self):
+        object = TPM2B_SENSITIVE_CREATE(
+            # size is too small
+            size=UINT16(4),
+            sensitive=TPMS_SENSITIVE_CREATE(
+                userAuth=TPM2B_AUTH(size=UINT16(0)),
+                data=TPM2B_SENSITIVE_DATA(size=UINT16(0)),
+            ),
+        )
+        events = obj_to_events(object)
+        binary = b"".join(b for b in Binary.unmarshal(events=events))
         events_generator = Binary.marshal(
-            tpm_type=Command, buffer=create_primary_binary, abort_on_error=True
+            tpm_type=TPM2B_SENSITIVE_CREATE, buffer=binary, abort_on_error=True
         )
 
-        with pytest.raises(SizeConstraintViolatedError) as exc_info:
-            # process the events
+        # process the events
+        list(events_generator)
+
+    def test_tpm2b_size_too_small(self):
+        object = TPM2B_SENSITIVE_CREATE(
+            # size is too small
+            size=UINT16(3),
+            sensitive=TPMS_SENSITIVE_CREATE(
+                userAuth=TPM2B_AUTH(size=UINT16(0)),
+                data=TPM2B_SENSITIVE_DATA(size=UINT16(0)),
+            ),
+        )
+        events = obj_to_events(object)
+        binary = b"".join(b for b in Binary.unmarshal(events=events))
+        events_generator = Binary.marshal(
+            tpm_type=TPM2B_SENSITIVE_CREATE, buffer=binary, abort_on_error=True
+        )
+
+        # process the events
+        with pytest.raises(SizeConstraintExceededError):
             list(events_generator)
 
-        assert exc_info.value.constraint.constraint_path == Path.from_string(
-            ".commandSize"
+    def test_tpm2b_size_too_big(self):
+        object = TPM2B_SENSITIVE_CREATE(
+            # size is too small
+            size=UINT16(5),
+            sensitive=TPMS_SENSITIVE_CREATE(
+                userAuth=TPM2B_AUTH(size=UINT16(0)),
+                data=TPM2B_SENSITIVE_DATA(size=UINT16(0)),
+            ),
         )
-        assert not exc_info.value.constraint.is_obsolete
-        assert (
-            exc_info.value.constraint.size_already
-            + create_primary_command_wrong.parameters.outsideInfo.size._value
-            == create_primary_command_wrong.commandSize + 1
-        )
-        assert (
-            exc_info.value.constraint.size_max
-            == create_primary_command_wrong.commandSize
-        )
-        assert exc_info.value.violator_path == Path.from_string(
-            ".parameters.outsideInfo.size"
+        events = obj_to_events(object)
+        binary = b"".join(b for b in Binary.unmarshal(events=events))
+        events_generator = Binary.marshal(
+            tpm_type=TPM2B_SENSITIVE_CREATE, buffer=binary, abort_on_error=True
         )
 
-        # remaining bytes everything after the offending size field
-        outside_info_events = obj_to_events(
-            create_primary_command_wrong.parameters.outsideInfo.buffer
-        )
-        creation_pcr_events = obj_to_events(
-            create_primary_command_wrong.parameters.creationPCR
-        )
-        events = itertools.chain(
-            outside_info_events,
-            creation_pcr_events,
-        )
-        remaining_fields_bytes = b"".join(b for b in Binary.unmarshal(events))
-
-        assert bytes(exc_info.value.bytes_remaining) == remaining_fields_bytes
+        # process the events
+        with pytest.raises(SizeConstraintSubceededError):
+            list(events_generator)
