@@ -218,9 +218,5 @@ class _INT:
         return cls
 
 
-class UINT(_INT):
-    pass
-
-
-class INT(_INT):
+class _UINT(_INT):
     pass
