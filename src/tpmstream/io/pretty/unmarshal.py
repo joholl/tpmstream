@@ -1,6 +1,6 @@
 import binascii
 
-from tpmstream.common.event import Event, MarshalEvent
+from tpmstream.common.event import Event, InfoEvent, MarshalEvent
 from tpmstream.common.util import is_list
 from tpmstream.spec.structures.base_types import BYTE
 
@@ -34,14 +34,22 @@ def unmarshal(events: list[Event]):
     events = iter(events)
 
     for event in events:
-        if is_list(event.type) and event.value is ...:
+        if (
+            isinstance(event, MarshalEvent)
+            and is_list(event.type)
+            and event.value is ...
+        ):
             # this is a list parent
             event = yield from pretty_list_elems(event, events)
             if event is None:
                 return
 
         yield from pretty(event)
-        if show_attributes and hasattr(event.value, "attributes"):
+        if (
+            show_attributes
+            and isinstance(event, MarshalEvent)
+            and hasattr(event.value, "attributes")
+        ):
             yield from pretty_attrs(event)
 
 
@@ -74,8 +82,16 @@ def format(tpm_type, path, binary, value):
     return result
 
 
-def pretty(event: MarshalEvent):
+def format_info(event: InfoEvent):
+    return f"{Fore.RED}{event}{Style.RESET_ALL}"
+
+
+def pretty(event: Event):
     """Generate human-readable string from field."""
+    if not isinstance(event, MarshalEvent):
+        yield format_info(event)
+        return
+
     if event.value is ...:
         value = ""
     else:
@@ -110,6 +126,10 @@ def pretty_list_elems(parent_event: MarshalEvent, events_generator):
                 child_event = None
                 break
 
+            if not isinstance(child_event, MarshalEvent):
+                yield from pretty(child_event)
+                continue
+
             # abort if it is not a list element
             if not is_child(parent_event, child_event):
                 break
@@ -130,6 +150,10 @@ def pretty_list_elems(parent_event: MarshalEvent, events_generator):
                 if is_empty:
                     yield from pretty(parent_event)
                 return None
+
+            if not isinstance(child_event, MarshalEvent):
+                yield from pretty(child_event)
+                continue
 
             # abort if it is not a list element
             if not is_child(parent_event, child_event):

@@ -19,7 +19,7 @@ from ...spec.common.values import ValidValues
 from ...spec.structures.constants import TPM_CC, TPM_RC, TPM_ST
 
 
-def consule_bytes(count):
+def consume_bytes(count):
     for _ in range(count):
         _ = yield
 
@@ -112,12 +112,13 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
         # get events from coroutine until None is yielded
         while event is not None:
             # TODO is this still needed?
-            if isinstance(event, MarshalEvent) and event.path == command_code_path:
-                command_code = event.value
-            if not is_bytes_remaining and event.path == Path.from_string("."):
-                # root path of new command/response although bytes are depleted
-                # (occurs for CommandResponseStream), do not yield event and end parsing
-                return command_code, None
+            if isinstance(event, MarshalEvent):
+                if event.path == command_code_path:
+                    command_code = event.value
+                if not is_bytes_remaining and event.path == Path.from_string("."):
+                    # root path of new command/response although bytes are depleted
+                    # (occurs for CommandResponseStream), do not yield event and end parsing
+                    return command_code, None
             yield event
             try:
                 event = coroutine.send(None)
@@ -136,7 +137,11 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
                 error.set_bytes_remaining(bytes_remaining)
                 raise error
 
-    raise InputStreamBytesDepletedError(command_code=command_code)
+    error = InputStreamBytesDepletedError(command_code=command_code)
+    if abort_on_error:
+        raise error
+    else:
+        return WarningEvent(error=error)
 
 
 def process_primitive(tpm_type, path, size_constraints=None, abort_on_error=True):
@@ -157,14 +162,18 @@ def process_primitive(tpm_type, path, size_constraints=None, abort_on_error=True
     value_constraint = ValueConstraint(
         constraint_path=path, tpm_type=tpm_type, valid_values=value_typed._valid_values
     )
-    if not value_typed.is_valid() and abort_on_error:
-        raise ValueConstraintViolatedError(constraint=value_constraint, value=value)
+
+    error = None
+    if not value_typed.is_valid():
+        error = ValueConstraintViolatedError(constraint=value_constraint, value=value)
+        if abort_on_error:
+            raise error
 
     none = yield event
     assert none is None
 
-    if not value_typed.is_valid() and not abort_on_error:
-        none = yield WarningEvent(cause=event, constraint=value_constraint)
+    if error:
+        none = yield WarningEvent(error=error)
         assert none is None
 
     return size, value
@@ -219,7 +228,7 @@ def process_byte_sized_array(
         except SizeConstraintExceededError as error:
             if abort_on_error or error.constraint != array_size_constraint:
                 raise error
-            # TODO raise WarningEvent
+            yield WarningEvent(error=error)
             size_constraints.remove(array_size_constraint)
             return array_size_constraint.size_already, None
 
@@ -230,9 +239,9 @@ def process_byte_sized_array(
     except SizeConstraintSubceededError as error:
         if abort_on_error:
             raise error
-        # TODO raise WarningEvent
+        yield WarningEvent(error=error)
         size_constraints.remove(array_size_constraint)
-        yield from consule_bytes(
+        yield from consume_bytes(
             array_size_constraint.size_max - array_size_constraint.size_already
         )
 
@@ -334,7 +343,7 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
     except SizeConstraintExceededError as error:
         if abort_on_error or error.constraint != tpm2b_size_constraint:
             raise error
-        # TODO raise WarningEvent
+        yield WarningEvent(error=error)
         size_constraints.remove(tpm2b_size_constraint)
         return size_size + tpm2b_size_constraint.size_already, None
 
@@ -343,8 +352,8 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
     except SizeConstraintSubceededError as error:
         if abort_on_error:
             raise error
-        # TODO raise WarningEvent
-        yield from consule_bytes(
+        yield WarningEvent(error=error)
+        yield from consume_bytes(
             tpm2b_size_constraint.size_max - tpm2b_size_constraint.size_already
         )
         size_constraints.remove(tpm2b_size_constraint)
@@ -468,7 +477,7 @@ def process_command(path, abort_on_error=True):
         except SizeConstraintExceededError as error:
             if abort_on_error or error.constraint != command_size_constraint:
                 raise error
-            # TODO raise WarningEvent
+            yield WarningEvent(error=error)
             size_constraints.remove(command_size_constraint)
             return values["commandSize"], values["commandCode"]
 
@@ -489,8 +498,8 @@ def process_command(path, abort_on_error=True):
     except SizeConstraintSubceededError as error:
         if abort_on_error:
             raise error
-        # TODO raise WarningEvent
-        yield from consule_bytes(
+        yield WarningEvent(error=error)
+        yield from consume_bytes(
             command_size_constraint.size_max - command_size_constraint.size_already
         )
         size_constraints.remove(array_size_constraint)
@@ -564,7 +573,7 @@ def process_response(path, command_code, abort_on_error=True):
         except SizeConstraintExceededError as error:
             if abort_on_error or error.constraint != response_size_constraint:
                 raise error
-            # TODO raise WarningEvent
+            yield WarningEvent(error=error)
             size_constraints.remove(response_size_constraint)
             return values["responseSize"], None
 
@@ -589,8 +598,8 @@ def process_response(path, command_code, abort_on_error=True):
     except SizeConstraintSubceededError as error:
         if abort_on_error:
             raise error
-        # TODO raise WarningEvent
-        yield from consule_bytes(
+        yield WarningEvent(error=error)
+        yield from consume_bytes(
             response_size_constraint.size_max - response_size_constraint.size_already
         )
         size_constraints.remove(array_size_constraint)

@@ -1,4 +1,4 @@
-from tpmstream.common.event import MarshalEvent
+from tpmstream.common.event import InfoEvent, MarshalEvent
 
 
 def unmarshal(events: list[MarshalEvent]):
@@ -8,6 +8,9 @@ def unmarshal(events: list[MarshalEvent]):
 
 def to_bytes(event: MarshalEvent) -> bytes:
     """Event to bytes. Zero-length bytes for ellipsis events."""
+    if isinstance(event, InfoEvent):
+        return b""
+
     if event.value is ...:
         return b""
     # is a primitive

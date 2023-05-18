@@ -33,38 +33,38 @@ class ConstraintViolatedError(Exception):
     def set_bytes_remaining(self, bytes):
         self.bytes_remaining = bytes
 
-    def __str__(self):
-        # TODO there is surely a better way to do this (use super __init__ in child classes?)
-        if hasattr(self, "message"):
-            return f"{type(self).__name__}({self.message})"
-        return str(super())
-
 
 class ValueConstraintViolatedError(ConstraintViolatedError):
     def __init__(self, constraint, value, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(
+            f"Parsed bad value for {constraint.tpm_type.__name__} {constraint.constraint_path} = 0x{value:x} = {value} not in {constraint.valid_values}",
+            **kwargs,
+        )
         self.constraint = constraint
         self.value = value
-        super().__init__(
-            f"Parsed bad value for {self.constraint.tpm_type.__name__} {self.constraint.constraint_path}: 0x{self.value:x} / {self.value} not in {self.constraint.valid_values}"
-        )
 
 
 class SizeConstraintViolatedError(ConstraintViolatedError):
-    def __init__(self, constraint, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, message, constraint, **kwargs):
+        super().__init__(message, **kwargs)
         self.constraint = constraint
 
 
 class SizeConstraintExceededError(SizeConstraintViolatedError):
     def __init__(self, constraint, violator_path, violator_value, **kwargs):
-        super().__init__(constraint, **kwargs)
+        super().__init__(
+            f"Violated size constraint {constraint.constraint_path} = {constraint.size_max}: already parsed {constraint.size_already} bytes and {violator_path} = {violator_value} exceeds the limit.",
+            constraint,
+            **kwargs,
+        )
         self.violator_path = violator_path
         self.violator_value = violator_value
-        self.message = f"Violated size constraint {self.constraint.constraint_path} = {self.constraint.size_max}: already parsed {self.constraint.size_already} bytes and {self.violator_path} = {self.violator_value} exceeds the limit."
 
 
 class SizeConstraintSubceededError(SizeConstraintViolatedError):
     def __init__(self, constraint, **kwargs):
-        super().__init__(constraint, **kwargs)
-        self.message = f"Violated size constraint: {self.constraint.constraint_path} = {self.constraint.size_max} bytes should be parsed by now, but {self.constraint.size_already} bytes were actually parsed"
+        super().__init__(
+            f"Violated size constraint: {constraint.constraint_path} = {constraint.size_max} bytes should be parsed by now, but {constraint.size_already} bytes were actually parsed",
+            constraint,
+            **kwargs,
+        )

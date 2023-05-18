@@ -23,20 +23,17 @@ class MarshalEvent(Event):
 
 @dataclass(frozen=True)
 class InfoEvent(Event):
-    cause: MarshalEvent
-    constraint: ConstraintViolatedError
+    error: ConstraintViolatedError
 
     def __str__(self):
-        return f"{self.cause.path} caused {self.constraint}"
+        return f"Warning: {self.error}"
 
 
 @dataclass(frozen=True)
 class WarningEvent(InfoEvent):
-    def __str__(self):
-        return f"Warning: {super().__str__()}"
+    pass
 
 
 @dataclass(frozen=True)
 class ErrorEvent(InfoEvent):
-    def __str__(self):
-        return f"Error: {super().__str__()}"
+    pass
