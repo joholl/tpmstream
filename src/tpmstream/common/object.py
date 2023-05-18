@@ -2,7 +2,7 @@ from dataclasses import fields
 from typing import Any
 
 from tpmstream.common.event import MarshalEvent
-from tpmstream.common.path import PATH_NODE_ROOT_NAME, Path, PathNode
+from tpmstream.common.path import PATH_NODE_ROOT_NAME, ROOT_PATH, Path, PathNode
 from tpmstream.common.util import is_list
 from tpmstream.spec.commands import Command, Response
 
@@ -11,7 +11,11 @@ def separate_events(events):
     """Takes generator of events. Yield lists of events, each is one command or response."""
     events_single_command_or_response = []
     for event in iter(events):
-        if event.path == ROOT_PATH and events_single_command_or_response != []:
+        if (
+            isinstance(event, MarshalEvent)
+            and event.path == ROOT_PATH
+            and events_single_command_or_response != []
+        ):
             yield events_single_command_or_response
             events_single_command_or_response = []
         events_single_command_or_response.append(event)
