@@ -106,27 +106,44 @@ def examples(args):
     if sought_command_code is None:
         return -1
 
+    already_printed: set[bytes] = set()
     for example_data_file in example_data_files:
         with open(example_data_file, "rb") as file:
-            events = list(
-                Auto.marshal(
-                    tpm_type=CommandResponseStream, buffer=bytes_from_files(file)
-                )
+            bytes_from_file = bytes(bytes_from_files(file))
+            events = Auto.marshal(
+                tpm_type=CommandResponseStream,
+                buffer=bytes_from_file,
+                abort_on_error=False,
             )
 
-        # TODO Get Responses, too. Response objects should know they commandCode, maybe via ._commandCode?
-        for cmd_or_rsp in events_to_objs(events):
+        for obj in events_to_objs(events):
             if (
-                hasattr(cmd_or_rsp, "commandCode")
-                and cmd_or_rsp.commandCode == sought_command_code
+                sought_command_code is None
+                or (  # command
+                    hasattr(obj, "commandCode")
+                    and obj.commandCode == sought_command_code
+                )
+                or (  # response
+                    hasattr(obj, "_command_code")
+                    and obj._command_code == sought_command_code
+                )
             ):
-                events_from_obj = list(obj_to_events(cmd_or_rsp))
-                for item in Binary.unmarshal(events_from_obj):
-                    print(" " + binascii.hexlify(item).decode(), end="")
+                events = list(obj_to_events(obj))
+                binary_list = list(Binary.unmarshal(events))
+                binary = b"".join(binary_list)
+
+                if binary in already_printed:
+                    continue
+
+                print(f"{type(obj).__name__}:", end="")
+                for binary_part in binary_list:
+                    print(" " + binascii.hexlify(binary_part).decode(), end="")
                 print()
-                for line in Pretty.unmarshal(events_from_obj):
+                for line in Pretty.unmarshal(events):
                     print(line)
                 print()
+
+                already_printed.add(binary)
 
     return 0
 
