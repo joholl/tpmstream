@@ -138,13 +138,7 @@ def events_to_obj(events: list[MarshalEvent], command_code=None):
     """Takes iterable of events and returns python object of type tpm_type."""
     # Turn events into dict. If events is a generator, it will be depleted.
     obj_dict, obj_type = _events_to_dict(events)
-    obj = _to_obj(obj_type, obj_dict[PATH_NODE_ROOT_NAME], command_code=command_code)
-
-    # TODO can we fix this a different way? Response should be a frozen dataset
-    if command_code is not None:
-        obj._command_code = command_code
-
-    return obj
+    return _to_obj(obj_type, obj_dict[PATH_NODE_ROOT_NAME], command_code=command_code)
 
 
 def obj_to_events(obj, path=None) -> list[MarshalEvent]:
