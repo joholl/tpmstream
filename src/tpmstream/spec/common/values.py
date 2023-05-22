@@ -325,9 +325,7 @@ def tpm_dataclass(cls):
                 setattr(cls, attr_name, None)
 
     # create dataclass
-    # TODO this should be a frozen dataclass, but we add the _command_code later for Responses
-    #result = dataclass(cls, frozen=True)
-    result = dataclass(cls, frozen=False)
+    result = dataclass(cls, frozen=True)
 
     # add plus variant (which includes optional fields)
     def plus():
