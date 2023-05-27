@@ -190,6 +190,8 @@ def numeric(cls):
 
 @numeric
 class _INT:
+    _signed = True
+
     def __init__(self, value: int = None):
         instance = self._valid_values.get(value)
         if instance is not None:
@@ -200,11 +202,12 @@ class _INT:
     def is_valid(self):
         return self._value in self._valid_values
 
-    def to_bytes(self, size=None, byteorder="big"):
+    def to_bytes(self, size=None, byteorder="big", signed=None):
         if size is None:
             size = self._int_size
-        # TODO WHAT NOW!? TPMI_ST_COMMAND_TAG (_INT) has TPM_ST (_INT)?
-        return self._value.to_bytes(self._int_size, byteorder)
+        if signed is None:
+            signed = self._signed
+        return self._value.to_bytes(size, byteorder=byteorder, signed=signed)
 
     def __format__(self, format_spec):
         return self._value.__format__(format_spec)
@@ -219,4 +222,4 @@ class _INT:
 
 
 class _UINT(_INT):
-    pass
+    _signed = False

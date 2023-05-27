@@ -17,7 +17,7 @@ class INT8(_INT):
 
 
 class BOOL(UINT8):
-    _valid_values = ValidValues(range(0, 1))
+    _valid_values = ValidValues(range(0, 2))
 
 
 class UINT16(_UINT):

@@ -36,8 +36,8 @@ class AlgValue:
         self._value = value
         self._types = types
 
-    def to_bytes(self, *args):
-        return self._value.to_bytes(*args)
+    def to_bytes(self, *args, **kwargs):
+        return self._value.to_bytes(*args, **kwargs)
 
 
 # TODO use *args instead of tuples

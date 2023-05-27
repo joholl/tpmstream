@@ -155,7 +155,7 @@ def process_primitive(tpm_type, path, size_constraints=None, abort_on_error=True
 
         byte = yield None
         data.append(byte)
-    value = int.from_bytes(data, byteorder="big")
+    value = int.from_bytes(data, byteorder="big", signed=tpm_type._signed)
 
     value_typed = tpm_type(value)
     event = MarshalEvent(path, tpm_type, value_typed)
