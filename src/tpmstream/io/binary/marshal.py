@@ -27,63 +27,28 @@ def consume_bytes(count):
 def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=True):
     """
     Generator.
-    Take iterable which yields single bytes.
-    Yield MarshalEvents.
+    Takes iterable "buffer" as a parameter which yields single bytes.
+    Yields Events.
     Return (command_code, remaining_bytes)
     command_code is an int or None.
     remaining_bytes is a generator or None if depleted.
 
+    Internally:
+    A) Send a byte into the processor.
+    B) As long as Events are yielded back, send None into the processor.
+    C.1) When it is done (for this byte), the processor will yield None ("ask for next byte"). Go back to A).
+    C.2) Alternatively, it might raise a StopIteration.
 
+    When the processor is done, it will raise a StopIteration (without yielding None first). In
+    that case we need to check if the buffer was indeed fully depleted (by taking an extra byte and expecting a
+    StopIteration).
 
-    ErrorEvent: Parsing is aborted, if error_exceptions=True, an exception is raised
-    WarningEvent: Parsing is continued, if warning_exceptions=True, an exception is raised
-
-
-                                                    ..._exceptions=True                 Events
-
-    invalid commandCode                             ValueConstraintViolatedError        ErrorEvent          + Forward
-    done parsing before commandSize exhausted       SizeConstraintViolatedError         ErrorEvent          + Forward
-    exhausted commandSize before done parsing       SizeConstraintViolatedError         ErrorEvent          + End (via surface from call stack via Exc)
-
-    invalid selector                                ValueConstraintViolatedError        ErrorEvent          + Forward
-
-
-
-    done parsing but input stream not exhausted     LeftoverBytesError if type is None  _ if type not None
-    input stream exhausted but not done parsing     StreamExhaustedError                ErrorEvent (done)
-
-
-
-
-    invalid value (not selector)                    ValueConstraintViolatedError        WarningEvent
-    done parsing (part) before size exhausted       SizeConstraintViolatedError         WarningEvent (next struct OR ~~forward by rem size~~)
-    (part) size exhausted before done parsing       SizeConstraintViolatedError         WarningEvent (continue parsing struct OR ~~next struct~~?)
-    anticipate size exhaustion (part) size          SizeConstraintViolatedError         WarningEvent
-
-
-
-
-    TODO in time order:
-    done parsing
-      commandSize exhausted
-      input stream exhausted
-    -> independent
-
-
-    input stream exhausted
-        done parsing (error)
-        commandSize exhausted (ignored)
-
-
-    commandSize exhausted
-        done parsing (error if type is none, warning otherwise?)
-        input stream exhausted  (?)
-
+    If the byte iterator raises a StopIteration, we ran out of bytes.
     """
     if root_path is None:
         root_path = Path(PathNode(PATH_NODE_ROOT_NAME))
     command_code_path = Path(root_path / PathNode("commandCode"))
-    coroutine = process(
+    processor = process(
         tpm_type,
         path=root_path,
         command_code=command_code,
@@ -93,42 +58,61 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
 
     command_code = None
     byte = None
-    is_bytes_remaining = True
+    buffer_depleted = False
+    event = None
+    processor_depleted = False
 
-    while is_bytes_remaining:
-        # send next byte into coroutine
+    while not buffer_depleted:
+        assert event is None
+
+        # the processor yielded None last time, asking for another byte (so it won't raise a StopIteration here)
         try:
-            event = coroutine.send(byte)
+            # send next byte into processor
+            event = processor.send(byte)
         except ConstraintViolatedError as error:
             # TODO code is redundant
             error.set_bytes_remaining(buffer_iter)
             raise error
 
+        # get next byte ahead of time, but we still have to get the events from previous byte
+        # this is to know ahead of time, if the buffer is depleted
         try:
             byte = next(buffer_iter)
         except StopIteration:
-            is_bytes_remaining = False
+            buffer_depleted = True
 
-        # get events from coroutine until None is yielded
+        # get events from processor until None is yielded
         while event is not None:
             # TODO is this still needed?
             if isinstance(event, MarshalEvent):
                 if event.path == command_code_path:
                     command_code = event.value
-                if not is_bytes_remaining and event.path == Path.from_string("."):
+                if buffer_depleted and event.path == Path.from_string("."):
                     # root path of new command/response although bytes are depleted
                     # (occurs for CommandResponseStream), do not yield event and end parsing
                     return command_code, None
+
+            # yield event from when we sent the byte or last iteration...
             yield event
+
+            # ... and get next event
             try:
-                event = coroutine.send(None)
-            except StopIteration:
-                if is_bytes_remaining:
+                event = processor.send(None)
+            except StopIteration as error:
+                if not buffer_depleted:
+                    # we already got next byte, so processor should not be done
+
                     # TODO properly make bytes_remaining a property for InputStreamBytesDepletedError, InputStreamSuperfluousBytesError
                     bytes_remaining = bytes(itertools.chain((byte,), buffer_iter))
-                    raise InputStreamSuperfluousBytesError(
+                    error = InputStreamSuperfluousBytesError(
                         bytes_remaining=bytes_remaining, command_code=command_code
                     )
+                    if abort_on_error:
+                        raise error
+                    else:
+                        yield WarningEvent(error=error)
+                        return
+
                 else:
                     # all bytes were depleted
                     return command_code, None
@@ -141,18 +125,20 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
     if abort_on_error:
         raise error
     else:
-        return WarningEvent(error=error)
+        yield WarningEvent(error=error)
+        return
 
 
 def process_primitive(tpm_type, path, size_constraints=None, abort_on_error=True):
     """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
     size = tpm_type._int_size
     data = []
-    for _ in range(size):
-        # before we consume byte, we need to check if we would violate any of the size constraints
-        if size_constraints is not None:
-            yield from size_constraints.bytes_parsed(path, 1)
 
+    # before we consume byte, we need to check if we would violate any of the size constraints
+    if size_constraints is not None:
+        yield from size_constraints.bytes_parsed(path, size)
+
+    for _ in range(size):
         byte = yield None
         data.append(byte)
     value = int.from_bytes(data, byteorder="big", signed=tpm_type._signed)

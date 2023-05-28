@@ -73,19 +73,27 @@ class TestEvents:
     )
     def test_canonical(self, binary_blob):
         """Verify that events <-> object is reversible."""
-        canonical = Canonical(binary_blob, tpm_type=Command)
+        canonical = Canonical(binary_blob, tpm_type=Command, abort_on_error=True)
 
         # binary to events
+        success = False
+        error = None
         try:
             canonical.events  # resolve
-        except ConstraintViolatedError as error:
+            success = True
+        except ConstraintViolatedError as e:
+            error = e
+        # avoid cluttering ("During handling of the above exception, another exception occurred")
+        if not success:
+            print(f"")
+            Canonical(binary_blob, tpm_type=Command, abort_on_error=False).debug()
             pytest.skip(
                 f"""
-    {error}
-    bytes:           {binascii.hexlify(binary_blob).decode()}
-    remaining bytes: {binascii.hexlify(bytes(error.bytes_remaining)).decode()}
-    """
+                Binary: {binary_blob.hex()}
+                {type(error).__name__}     {error}
+            """
             )
+
         # events to object
         command = canonical.object
         # object to events
