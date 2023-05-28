@@ -11,6 +11,11 @@ def implies(a: bool, b: bool):
     return not a or b
 
 
+def consume_bytes(count):
+    for _ in range(count):
+        _ = yield
+
+
 class Constraint:
     def __init__(self, constraint_path: Path = None):
         self.constraint_path = constraint_path
@@ -46,8 +51,11 @@ class SizeConstraint(Constraint):
 
         # look ahead (so self.size_already is the number of parsed bytes)
         if self.size_max is not None and self.size_already + size > self.size_max:
+            yield from consume_bytes(self.size_max - self.size_already)
             raise SizeConstraintExceededError(
-                self, violator_path=path, violator_value=size
+                self,
+                violator_path=path,
+                exceeded_by=self.size_already + size - self.size_max,
             )
 
         if not anticipate_only:

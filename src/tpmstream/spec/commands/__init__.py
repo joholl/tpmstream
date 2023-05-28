@@ -58,6 +58,7 @@ class Response:
         "handles": response_handle_types,
         "parameters": response_param_types,
     }
+    # _command_code: added when object is created
 
     tag: TPM_ST
     responseSize: UINT32

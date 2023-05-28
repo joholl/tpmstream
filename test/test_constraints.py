@@ -277,9 +277,11 @@ class TestConstraintsExceptions:
         assert exc_info.value.constraint.constraint_path == Path.from_string(
             ".commandSize"
         )
-        assert (
-            exc_info.value.constraint.size_already == startup_command_wrong.commandSize
+        size_until_last_param = (
+            startup_command.commandSize
+            - startup_command.parameters.startupType._int_size
         )
+        assert exc_info.value.constraint.size_already == size_until_last_param
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
         assert not exc_info.value.constraint.is_obsolete
         assert exc_info.value.violator_path == Path.from_string(
@@ -446,10 +448,20 @@ class TestConstraintsExceptions:
             ".parameters.inPublic.size"
         )
         assert not exc_info.value.constraint.is_obsolete
-        assert (
-            exc_info.value.constraint.size_already
-            == create_primary_command_wrong.parameters.inPublic.size._value
+        size_until_last_member = (
+            create_primary_command.parameters.inPublic.publicArea.type._int_size
+            + create_primary_command.parameters.inPublic.publicArea.nameAlg._int_size
+            + create_primary_command.parameters.inPublic.publicArea.objectAttributes._int_size
+            + create_primary_command.parameters.inPublic.publicArea.authPolicy.size._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.symmetric.algorithm._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.scheme.scheme._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.scheme.details.ecdaa.hashAlg._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.scheme.details.ecdaa.count._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.curveID._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.kdf.scheme._int_size
+            + create_primary_command.parameters.inPublic.publicArea.unique.ecc.x.size._int_size
         )
+        assert exc_info.value.constraint.size_already == size_until_last_member
         assert (
             exc_info.value.constraint.size_max
             == create_primary_command_wrong.parameters.inPublic.size._value
@@ -696,9 +708,11 @@ class TestConstraintsEvents:
         assert exc_info.value.constraint.constraint_path == Path.from_string(
             ".commandSize"
         )
-        assert (
-            exc_info.value.constraint.size_already == startup_command_wrong.commandSize
+        size_until_last_param = (
+            startup_command.commandSize
+            - startup_command.parameters.startupType._int_size
         )
+        assert exc_info.value.constraint.size_already == size_until_last_param
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
         assert not exc_info.value.constraint.is_obsolete
         assert exc_info.value.violator_path == Path.from_string(
@@ -871,10 +885,20 @@ class TestConstraintsEvents:
             ".parameters.inPublic.size"
         )
         assert not exc_info.value.constraint.is_obsolete
-        assert (
-            exc_info.value.constraint.size_already
-            == create_primary_command_wrong.parameters.inPublic.size._value
+        size_until_last_member = (
+            create_primary_command.parameters.inPublic.publicArea.type._int_size
+            + create_primary_command.parameters.inPublic.publicArea.nameAlg._int_size
+            + create_primary_command.parameters.inPublic.publicArea.objectAttributes._int_size
+            + create_primary_command.parameters.inPublic.publicArea.authPolicy.size._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.symmetric.algorithm._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.scheme.scheme._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.scheme.details.ecdaa.hashAlg._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.scheme.details.ecdaa.count._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.curveID._int_size
+            + create_primary_command.parameters.inPublic.publicArea.parameters.eccDetail.kdf.scheme._int_size
+            + create_primary_command.parameters.inPublic.publicArea.unique.ecc.x.size._int_size
         )
+        assert exc_info.value.constraint.size_already == size_until_last_member
         assert (
             exc_info.value.constraint.size_max
             == create_primary_command_wrong.parameters.inPublic.size._value
