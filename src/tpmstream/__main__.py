@@ -3,10 +3,8 @@ import sys
 from argparse import ArgumentParser, FileType
 from difflib import get_close_matches
 
-from tpmstream.common.object import events_to_objs, obj_to_events
-from tpmstream.spec.commands import CommandResponseStream
-
 from . import __version__
+from .common.object import events_to_objs, obj_to_events
 from .data import example_data_files
 from .io import bytes_from_files
 from .io.auto import Auto
@@ -14,14 +12,20 @@ from .io.binary import Binary
 from .io.events import Events
 from .io.pcapng import Pcapng
 from .io.pretty import Pretty
+from .spec import all_types
+from .spec.commands import CommandResponseStream, Response
 
 # TODO import .io.tpm_pytss.mapping
-from .spec.structures import structures_types
 from .spec.structures.constants import TPM_CC
 
 parser = ArgumentParser(
     description="Process TPM 2.0 commands and responses.",
 )
+
+
+def cc_name(command_code: TPM_CC):
+    # strip leading "TPM_CC."
+    return str(command_code)[len(TPM_CC.__name__) + 1 :]
 
 
 def fuzzy_match(input: str, options: dict[str, any], name=None):
@@ -59,25 +63,38 @@ def convert(args):
         "pretty": Pretty,
     }[args.format_out]
 
+    command_code = None
     if args.type is None:
         tpm_type = CommandResponseStream
     else:
-        # TODO all types
-        tpm_type = fuzzy_match(
-            args.type, {t.__name__: t for t in structures_types}, "type"
-        )
+        tpm_type = fuzzy_match(args.type, {t.__name__: t for t in all_types}, "type")
         if tpm_type is None:
             return -1
+        if tpm_type is Response:
+            if not args.command:
+                print(
+                    f"Error: --type=Response requires --command=<command>.",
+                    file=sys.stderr,
+                )
+                return -1
+            command_code = fuzzy_match(
+                args.command, {cc_name(cc): cc for cc in TPM_CC}, name="commandCode"
+            )
+            if command_code is None:
+                return -1
 
     if tpm_type is not CommandResponseStream and args.format_in == "auto":
         raise RuntimeError(
-            "Custom type (--type=...) is incompatible with --in=auto (default)"
+            "Custom type (--type=...) is incompatible with --in=auto (default). Did you mean --in=binary?"
         )
 
     # binary to events to pretty
     # TODO abort_on_error as cli argument
     events = format_in.marshal(
-        tpm_type=tpm_type, buffer=bytes_from_files(args.file), abort_on_error=False
+        tpm_type=tpm_type,
+        buffer=bytes_from_files(args.file),
+        command_code=command_code,
+        abort_on_error=False,
     )
 
     for line in format_out.unmarshal(events):
@@ -90,10 +107,6 @@ def convert(args):
 
 
 def examples(args):
-    def cc_name(command_code: TPM_CC):
-        # strip leading "TPM_CC."
-        return str(command_code)[len(TPM_CC.__name__) + 1 :]
-
     if args.command is None:
         for command_code in TPM_CC:
             # remove leading "TPM_CC_"
@@ -157,19 +170,24 @@ format_in_arg = {
     "type": str,
     "choices": ["binary", "pcapng", "auto"],
     "default": "auto",
-    "help": "input stream format",
+    "help": "input stream format, default is auto (--in=auto only works with --type=CommandResponseStream)",
 }
 format_out_arg = {
     "dest": "format_out",
     "type": str,
     "choices": ["binary", "events", "pretty"],
     "default": "pretty",
-    "help": "output stream format",
+    "help": "output stream format, default is pretty",
 }
 type_arg = {
     "dest": "type",
     "type": str,
-    "help": "type to parse, default is CommandResponseStream; incompatible with --in=auto",
+    "help": "type to parse, default is CommandResponseStream",
+}
+command_arg = {
+    "dest": "command",
+    "type": str,
+    "help": "For --type=Response: command this response corresponds to, e.g. GetRandom",
 }
 
 parser_convert = subparsers.add_parser(
@@ -183,11 +201,12 @@ parser_convert.add_argument(
 parser_convert.add_argument("--in", **format_in_arg)
 parser_convert.add_argument("--out", **format_out_arg)
 parser_convert.add_argument("--type", **type_arg)
+parser_convert.add_argument("--command", **command_arg)
 parser_convert.set_defaults(func=convert)
 
 parser_example = subparsers.add_parser("example", aliases=["ex"])
 parser_example.add_argument(
-    "command", type=str, nargs="?", help="TPM Command, like TPM2_GetRandom"
+    "command", type=str, nargs="?", help="TPM Command, like GetRandom"
 )
 # TODO add type_arg
 parser_example.set_defaults(func=examples)
