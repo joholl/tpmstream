@@ -54,3 +54,9 @@ create_primary_bin="$(printf '80020000007700000131400000010000003d02000000001455
   assert_failure
   assert_output --regexp "Error: --type=Response requires --command=<command>."
 }
+
+@test "Example TPM2B_PUBLIC." {
+  run tpmstream ex TPM2B_PUBLIC
+  assert_success
+  assert_output --regexp "TPM2B_PUBLIC:"
+}
