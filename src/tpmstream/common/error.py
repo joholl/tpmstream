@@ -68,3 +68,17 @@ class SizeConstraintSubceededError(SizeConstraintViolatedError):
             constraint,
             **kwargs,
         )
+
+
+class AnticipatedSizeConstraintExceededError(SizeConstraintViolatedError):
+    def __init__(
+        self, constraint, violator_path, violator_value, exceeded_by, **kwargs
+    ):
+        super().__init__(
+            f"Anticipating violation of size constraint {constraint.constraint_path} = {constraint.size_max}: already parsed {constraint.size_already} bytes and {violator_path} = {violator_value} indicates that the limit will be exceeded by >= {exceeded_by} byte(s).",
+            constraint,
+            **kwargs,
+        )
+        self.violator_path = violator_path
+        self.violator_value = violator_value
+        self.exceeded_by = exceeded_by

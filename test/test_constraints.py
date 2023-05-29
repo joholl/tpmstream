@@ -283,7 +283,7 @@ class TestConstraintsExceptions:
         )
         assert exc_info.value.constraint.size_already == size_until_last_param
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
         assert exc_info.value.violator_path == Path.from_string(
             ".parameters.startupType"
         )
@@ -305,7 +305,7 @@ class TestConstraintsExceptions:
         )
         assert exc_info.value.constraint.size_already == len(startup_binary)
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
 
     def test_input_exhausted_before_done_parsing(self):
         startup_events = obj_to_events(startup_command)
@@ -447,7 +447,7 @@ class TestConstraintsExceptions:
         assert exc_info.value.constraint.constraint_path == Path.from_string(
             ".parameters.inPublic.size"
         )
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
         size_until_last_member = (
             create_primary_command.parameters.inPublic.publicArea.type._int_size
             + create_primary_command.parameters.inPublic.publicArea.nameAlg._int_size
@@ -515,7 +515,7 @@ class TestConstraintsExceptions:
         assert exc_info.value.constraint.constraint_path == Path.from_string(
             ".parameters.inPublic.size"
         )
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
         assert (
             exc_info.value.constraint.size_already + size_too_long_by_bytes
             == create_primary_command_wrong.parameters.inPublic.size._value
@@ -568,7 +568,7 @@ class TestConstraintsExceptions:
     #     assert exc_info.value.constraint.constraint_path == Path.from_string(
     #         ".commandSize"
     #     )
-    #     assert not exc_info.value.constraint.is_obsolete
+    #     assert exc_info.value.constraint.is_obsolete
     #     assert (
     #         exc_info.value.constraint.size_already
     #         + create_primary_command_wrong.parameters.outsideInfo.size._value
@@ -714,7 +714,7 @@ class TestConstraintsEvents:
         )
         assert exc_info.value.constraint.size_already == size_until_last_param
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
         assert exc_info.value.violator_path == Path.from_string(
             ".parameters.startupType"
         )
@@ -738,7 +738,7 @@ class TestConstraintsEvents:
         )
         assert exc_info.value.constraint.size_already == len(startup_binary)
         assert exc_info.value.constraint.size_max == startup_command_wrong.commandSize
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
 
     def test_input_exhausted_before_done_parsing(self):
         startup_events = obj_to_events(startup_command)
@@ -884,7 +884,7 @@ class TestConstraintsEvents:
         assert exc_info.value.constraint.constraint_path == Path.from_string(
             ".parameters.inPublic.size"
         )
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
         size_until_last_member = (
             create_primary_command.parameters.inPublic.publicArea.type._int_size
             + create_primary_command.parameters.inPublic.publicArea.nameAlg._int_size
@@ -952,7 +952,7 @@ class TestConstraintsEvents:
         assert exc_info.value.constraint.constraint_path == Path.from_string(
             ".parameters.inPublic.size"
         )
-        assert not exc_info.value.constraint.is_obsolete
+        assert exc_info.value.constraint.is_obsolete
         assert (
             exc_info.value.constraint.size_already + size_too_long_by_bytes
             == create_primary_command_wrong.parameters.inPublic.size._value
@@ -1005,7 +1005,7 @@ class TestConstraintsEvents:
     #     assert exc_info.value.constraint.constraint_path == Path.from_string(
     #         ".commandSize"
     #     )
-    #     assert not exc_info.value.constraint.is_obsolete
+    #     assert exc_info.value.constraint.is_obsolete
     #     assert (
     #         exc_info.value.constraint.size_already
     #         + create_primary_command_wrong.parameters.outsideInfo.size._value
