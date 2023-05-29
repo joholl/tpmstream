@@ -1,9 +1,10 @@
 from dataclasses import fields
 from typing import Any
 
-from tpmstream.common.event import MarshalEvent
+from tpmstream.common.event import Event, MarshalEvent
 from tpmstream.common.path import PATH_NODE_ROOT_NAME, ROOT_PATH, Path, PathNode
 from tpmstream.common.util import is_list
+from tpmstream.io.events import Events
 from tpmstream.spec.commands import Command, Response
 
 
@@ -23,18 +24,18 @@ def separate_events(events):
         yield events_single_command_or_response
 
 
-def events_to_objs(events: list[MarshalEvent]):
+def events_to_objs(events: list[Event]):
     """Takes iterable of events and yields python objects of type tpm_type."""
     events_single_cmd_rsp = separate_events(events)
 
     command_code = None
     for events in events_single_cmd_rsp:
         if command_code is None:
-            command = events_to_obj(Command, events)
+            command = events_to_obj(events)
             command_code = command.commandCode
             yield command
         else:
-            response = events_to_obj(Response, events, command_code=command_code)
+            response = events_to_obj(events, command_code=command_code)
             yield response
             command_code = None
 
@@ -134,8 +135,10 @@ def _to_obj(tpm_type, value, command_code=None):
         return value
 
 
-def events_to_obj(events: list[MarshalEvent], command_code=None):
+def events_to_obj(events: list[Events], command_code=None):
     """Takes iterable of events and returns python object of type tpm_type."""
+    events = (e for e in events if isinstance(e, MarshalEvent))
+
     # Turn events into dict. If events is a generator, it will be depleted.
     obj_dict, obj_type = _events_to_dict(events)
     return _to_obj(obj_type, obj_dict[PATH_NODE_ROOT_NAME], command_code=command_code)
