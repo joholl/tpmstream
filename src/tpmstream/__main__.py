@@ -1,6 +1,7 @@
 import binascii
 import sys
 from argparse import ArgumentParser, FileType
+from dataclasses import fields
 from difflib import get_close_matches
 
 from . import __version__
@@ -106,6 +107,18 @@ def convert(args):
     return 0
 
 
+def find_fields(tpm_type, obj: any):
+    if type(obj) is tpm_type:
+        yield obj
+    try:
+        obj_fields = fields(obj)
+    except TypeError:
+        return
+
+    for field in obj_fields:
+        yield from find_fields(tpm_type=tpm_type, obj=getattr(obj, field.name))
+
+
 def examples(args):
     if args.command is None:
         for command_code in TPM_CC:
@@ -113,11 +126,26 @@ def examples(args):
             print(cc_name(command_code))
         return
 
-    sought_command_code = fuzzy_match(
-        args.command, {cc_name(cc): cc for cc in TPM_CC}, name="commandCode"
+    command_codes = {cc_name(cc): cc for cc in TPM_CC}
+    # TODO what about Command, Response and CommandResponseStream?
+    types = {t.__name__: t for t in all_types}
+    assert len(set(command_codes.keys()) & set(types.keys())) == 0
+
+    types_and_command_codes = {cc_name(cc): cc for cc in TPM_CC} | {
+        t.__name__: t for t in all_types
+    }
+    sought_type_or_command_code = fuzzy_match(
+        args.command, types_and_command_codes, name="command or type"
     )
-    if sought_command_code is None:
+    if sought_type_or_command_code is None:
         return -1
+
+    if sought_type_or_command_code in types.values():
+        command_code = None
+        tpm_type = sought_type_or_command_code
+    else:
+        command_code = sought_type_or_command_code
+        tpm_type = None
 
     already_printed: set[bytes] = set()
     for example_data_file in example_data_files:
@@ -131,32 +159,36 @@ def examples(args):
 
         for obj in events_to_objs(events):
             if (
-                sought_command_code is None
+                command_code is None
                 or (  # command
-                    hasattr(obj, "commandCode")
-                    and obj.commandCode == sought_command_code
+                    hasattr(obj, "commandCode") and obj.commandCode == command_code
                 )
                 or (  # response
-                    hasattr(obj, "_command_code")
-                    and obj._command_code == sought_command_code
+                    hasattr(obj, "_command_code") and obj._command_code == command_code
                 )
             ):
-                events = list(obj_to_events(obj))
-                binary_list = list(Binary.unmarshal(events))
-                binary = b"".join(binary_list)
+                if tpm_type:
+                    objs_to_print = list(find_fields(tpm_type=tpm_type, obj=obj))
+                else:
+                    objs_to_print = (obj,)
 
-                if binary in already_printed:
-                    continue
+                for obj_to_print in objs_to_print:
+                    events = list(obj_to_events(obj_to_print))
+                    binary_list = list(Binary.unmarshal(events))
+                    binary = b"".join(binary_list)
 
-                print(f"{type(obj).__name__}:", end="")
-                for binary_part in binary_list:
-                    print(" " + binascii.hexlify(binary_part).decode(), end="")
-                print()
-                for line in Pretty.unmarshal(events):
-                    print(line)
-                print()
+                    if binary in already_printed:
+                        continue
 
-                already_printed.add(binary)
+                    print(f"{type(obj_to_print).__name__}:", end="")
+                    for binary_part in binary_list:
+                        print(" " + binascii.hexlify(binary_part).decode(), end="")
+                    print()
+                    for line in Pretty.unmarshal(events):
+                        print(line)
+                    print()
+
+                    already_printed.add(binary)
 
     return 0
 
