@@ -66,6 +66,10 @@ def bytes_from_files(files):
         files = (files,)
 
     for file in files:
+        # workaround https://bugs.python.org/issue14156
+        if file.mode == "r":
+            file = file.buffer
+
         while True:
             buffer = file.read()
             if not buffer:
