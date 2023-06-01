@@ -10,6 +10,11 @@ def numeric(cls):
 
         setattr(cls, "__int__", __int__)
 
+    def __index__(self):
+        return int(self._value)
+
+    setattr(cls, "__index__", __index__)
+
     def __add__(self, other):
         return int(self) + other
 
