@@ -160,7 +160,7 @@ def process_primitive(tpm_type, path, size_constraints=None, abort_on_error=True
         none = yield WarningEvent(error=error)
         assert none is None
 
-    return size, value
+    return size, value_typed
 
 
 def process_array(tpm_type, path, count, size_constraints=None, abort_on_error=True):
@@ -168,20 +168,23 @@ def process_array(tpm_type, path, count, size_constraints=None, abort_on_error=T
     assert len(tpm_type.__args__) == 1
     element_type = tpm_type.__args__[0]
 
-    none = yield MarshalEvent(path, list[element_type], ...)
+    none = yield MarshalEvent(path, tpm_type, ...)
     assert none is None
 
     parent_path = path[:-1]
     element_size = 0
+    elements = tpm_type()
     for index in range(count):
         child_node = path[-1].with_index(index)
-        element_size, _ = yield from process(
+        element_size, element = yield from process(
             element_type,
             parent_path / child_node,
             size_constraints=size_constraints,
             abort_on_error=abort_on_error,
         )
-    return element_size * count, None
+        elements.append(element)
+
+    return element_size * count, elements
 
 
 def process_byte_sized_array(
@@ -195,15 +198,16 @@ def process_byte_sized_array(
     assert len(tpm_type.__args__) == 1
     element_type = tpm_type.__args__[0]
 
-    none = yield MarshalEvent(path, list[element_type], ...)
+    none = yield MarshalEvent(path, tpm_type, ...)
     assert none is None
 
+    elements = tpm_type()
     parent_path = path[:-1]
     index = 0
     while array_size_constraint.size_already < array_size_constraint.size_max:
         child_node = path[-1].with_index(index)
         try:
-            _element_size, _ = yield from process(
+            _element_size, element_value = yield from process(
                 element_type,
                 parent_path / child_node,
                 size_constraints=size_constraints,
@@ -215,12 +219,13 @@ def process_byte_sized_array(
             yield WarningEvent(error=error)
             return array_size_constraint.size_already, None
 
+        elements.append(element_value)
         index += 1
 
     yield from array_size_constraint.assert_done(
         all_size_constraints=size_constraints, abort_on_error=abort_on_error
     )
-    return array_size_constraint.size_already, None
+    return array_size_constraint.size_already, elements
 
 
 def process_tpms(tpm_type, path, size_constraints=None, abort_on_error=True):
@@ -234,10 +239,12 @@ def process_tpms(tpm_type, path, size_constraints=None, abort_on_error=True):
     for field in fields(tpm_type):
         if is_list(field.type):
             # list member
-            elements_size, _ = yield from process(
+            # count is (non-list) field immediately preceding this list
+            count = [v for v in values.values() if not is_list(type(v))][-1]
+            elements_size, element_value = yield from process(
                 field.type,
                 path / PathNode(field.name),
-                count=element_value,
+                count=count,
                 size_constraints=size_constraints,
                 abort_on_error=abort_on_error,
             )
@@ -261,7 +268,7 @@ def process_tpms(tpm_type, path, size_constraints=None, abort_on_error=True):
             )
         values[field.name] = element_value
         size += element_size
-    return size, None
+    return size, tpm_type(**values)
 
 
 def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
@@ -270,6 +277,7 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
     none = yield MarshalEvent(path, tpm_type, ...)
     assert none is None
 
+    values = {}
     size_field, buffer_field = fields(tpm_type)
     size_path = path / PathNode(size_field.name)
     size_size, buffer_size_exp = yield from process(
@@ -278,6 +286,7 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
         size_constraints=size_constraints,
         abort_on_error=abort_on_error,
     )
+    values[size_field.name] = buffer_size_exp
 
     # Size can be for a byte buffer or a complex type.
     # Technically, a byte buffer does not need a size constraint, however, when calling set_constraint(), the violation
@@ -293,32 +302,21 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
 
     if is_list(buffer_field.type):
         # common tpm2b with byte buffer
-        buffer_size, _ = yield from process(
+        buffer_size, buffer_value = yield from process(
             buffer_field.type,
             path / PathNode(buffer_field.name),
             count=buffer_size_exp,
             size_constraints=size_constraints,
             abort_on_error=abort_on_error,
         )
+        values[buffer_field.name] = buffer_value
         yield from tpm2b_size_constraint.assert_done(
             all_size_constraints=size_constraints, abort_on_error=abort_on_error
         )
-        return size_size + buffer_size, None
-
-    # buffer represents single complex type, count is number of bytes
-    # TODO can we remove this?
-    if buffer_size_exp == 0:
-        none = yield MarshalEvent(
-            path / PathNode(buffer_field.name), buffer_field.type, ...
-        )
-        assert none is None
-        yield from tpm2b_size_constraint.assert_done(
-            all_size_constraints=size_constraints, abort_on_error=abort_on_error
-        )
-        return size_size, None
+        return size_size + buffer_size, tpm_type(**values)
 
     try:
-        buffer_size, _ = yield from process(
+        buffer_size, buffer_value = yield from process(
             buffer_field.type,
             path / PathNode(buffer_field.name),
             size_constraints=size_constraints,
@@ -334,7 +332,8 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
         all_size_constraints=size_constraints, abort_on_error=abort_on_error
     )
     buffer_size = tpm2b_size_constraint.size_already
-    return size_size + buffer_size, None
+    values[buffer_field.name] = buffer_value
+    return size_size + buffer_size, tpm_type(**values)
 
 
 def process_tpmu(tpm_type, path, selector, size_constraints=None, abort_on_error=True):
@@ -373,7 +372,7 @@ def process_tpmu(tpm_type, path, selector, size_constraints=None, abort_on_error
     if is_list(field.type):
         # union member of list type (must be statically sized as indicated in _list_size)
         assert hasattr(tpm_type, "_list_size")
-        size, data = yield from process(
+        size, value = yield from process(
             field.type,
             path / PathNode(field.name),
             count=tpm_type._list_size[field.name],
@@ -381,14 +380,14 @@ def process_tpmu(tpm_type, path, selector, size_constraints=None, abort_on_error
             abort_on_error=abort_on_error,
         )
     else:
-        size, data = yield from process(
+        size, value = yield from process(
             field.type,
             path / PathNode(field.name),
             size_constraints=size_constraints,
             abort_on_error=abort_on_error,
         )
 
-    return size, data
+    return size, value
 
 
 def process_command(path, abort_on_error=True):
@@ -453,7 +452,7 @@ def process_command(path, abort_on_error=True):
             if abort_on_error or error.constraint != command_size_constraint:
                 raise error
             yield WarningEvent(error=error)
-            return values["commandSize"], values["commandCode"]
+            return values["commandSize"], tpm_type(**values)
 
         if field.name == "commandSize":
             yield from command_size_constraint.set_constraint(
@@ -476,11 +475,11 @@ def process_command(path, abort_on_error=True):
     yield from command_size_constraint.assert_done(
         all_size_constraints=size_constraints, abort_on_error=abort_on_error
     )
-    return values["commandSize"], values["commandCode"]
+    return values["commandSize"], tpm_type(**values)
 
     # as a sanity check - all size_constraints should be handled explicitly by now
     size_constraints.assert_done()
-    return size, values["commandCode"]
+    return size, tpm_type(**values)
 
 
 def process_response(path, command_code, abort_on_error=True):
@@ -547,7 +546,7 @@ def process_response(path, command_code, abort_on_error=True):
             if abort_on_error or error.constraint != response_size_constraint:
                 raise error
             yield WarningEvent(error=error)
-            return values["responseSize"], None
+            return values["responseSize"], tpm_type(**values)
 
         if field.name == "parameters" and "parameterSize" in values:
             yield from parameter_size_constraint.assert_done(
@@ -575,11 +574,11 @@ def process_response(path, command_code, abort_on_error=True):
     yield from response_size_constraint.assert_done(
         all_size_constraints=size_constraints, abort_on_error=abort_on_error
     )
-    return values["responseSize"], None
+    return values["responseSize"], tpm_type(**values)
 
     # as a sanity check - all size_constraints should be handled explicitly by now
     size_constraints.assert_done()
-    return size, None
+    return size, tpm_type(**values)
 
 
 def process_command_response_stream(path, abort_on_error=True):
@@ -588,11 +587,12 @@ def process_command_response_stream(path, abort_on_error=True):
         # The calling function must detect when this generator is done. Basically, when there are no bytes left and this
         # generator yields the command/response root event for the new command/response, we are done here. This cannot
         # be handles at this level. Well, technically it can, but trust me, it is not something anyone would want...
-        _, command_code = yield from process(
-            Command, path, abort_on_error=abort_on_error
-        )
+        _, command = yield from process(Command, path, abort_on_error=abort_on_error)
         _, _ = yield from process(
-            Response, path, command_code=command_code, abort_on_error=abort_on_error
+            Response,
+            path,
+            command_code=command.commandCode,
+            abort_on_error=abort_on_error,
         )
 
 
