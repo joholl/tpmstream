@@ -6,6 +6,7 @@ from tpmstream.common.path import PATH_NODE_ROOT_NAME, ROOT_PATH, Path, PathNode
 from tpmstream.common.util import is_list
 from tpmstream.io.events import Events
 from tpmstream.spec.commands import Command, Response
+from tpmstream.spec.commands.params_common import TPMS_PARAMS
 
 
 def separate_events(events):
@@ -98,6 +99,8 @@ def _dict_to_obj(tpm_type, dict_obj: dict[str, any], command_code=None):
     """Turns nested dict into an object of type tpm_type."""
     if tpm_type is Command:
         command_code = dict_obj["commandCode"]
+    if TPMS_PARAMS.is_encrypted_params(dict_obj):
+        tpm_type = tpm_type.encrypted()
 
     def get_attr_type(name: str):
         try:
