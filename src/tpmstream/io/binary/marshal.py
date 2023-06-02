@@ -325,6 +325,17 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
         )
         return size_size + buffer_size, tpm_type(**values)
 
+    # buffer represents single complex type, count is number of bytes
+    if buffer_size_exp == 0:
+        none = yield MarshalEvent(
+            path / PathNode(buffer_field.name), buffer_field.type, ...
+        )
+        assert none is None
+        yield from tpm2b_size_constraint.assert_done(
+            all_size_constraints=size_constraints, abort_on_error=abort_on_error
+        )
+        return size_size, None
+
     try:
         buffer_size, buffer_value = yield from process(
             buffer_field.type,
