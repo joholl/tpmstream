@@ -14,6 +14,7 @@ from ...common.event import MarshalEvent, Path, WarningEvent
 from ...common.path import PATH_NODE_ROOT_NAME, PathNode
 from ...common.util import is_list
 from ...spec.commands import Command, CommandResponseStream, Response
+from ...spec.commands.params_common import TPMS_PARAMS
 from ...spec.common.values import ValidValues
 from ...spec.structures.constants import TPM_CC, TPM_RC, TPM_ST
 
@@ -228,8 +229,17 @@ def process_byte_sized_array(
     return array_size_constraint.size_already, elements
 
 
-def process_tpms(tpm_type, path, size_constraints=None, abort_on_error=True):
+def process_tpms(
+    tpm_type,
+    path,
+    size_constraints=None,
+    parameter_encryption=None,
+    abort_on_error=True,
+):
     """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
+    if parameter_encryption and issubclass(tpm_type, TPMS_PARAMS):
+        tpm_type = tpm_type.encrypted()
+
     none = yield MarshalEvent(path, tpm_type, ...)
     assert none is None
 
@@ -396,6 +406,7 @@ def process_command(path, abort_on_error=True):
     command_size_constraint = SizeConstraint()
     authorization_area_constraint = SizeConstraint()
     size_constraints = SizeConstraintList((command_size_constraint,))
+    parameter_encryption = None
 
     none = yield MarshalEvent(path, tpm_type, ...)
     assert none is None
@@ -443,6 +454,7 @@ def process_command(path, abort_on_error=True):
             element_size, element_value = yield from process(
                 field_type,
                 element_path,
+                parameter_encryption=parameter_encryption,
                 array_size_constraint=array_size_constraint,
                 size_constraints=size_constraints,
                 abort_on_error=abort_on_error,
@@ -453,6 +465,8 @@ def process_command(path, abort_on_error=True):
                 raise error
             yield WarningEvent(error=error)
             return values["commandSize"], tpm_type(**values)
+
+        parameter_encryption = None
 
         if field.name == "commandSize":
             yield from command_size_constraint.set_constraint(
@@ -469,6 +483,12 @@ def process_command(path, abort_on_error=True):
                 abort_on_error=abort_on_error,
             )
             size_constraints.append(authorization_area_constraint)
+        if field.name == "authorizationArea":
+            parameter_encryption = any(
+                authorizationArea.sessionAttributes.encrypt
+                or authorizationArea.sessionAttributes.decrypt
+                for authorizationArea in element_value
+            )
 
         values[field.name] = element_value
 
@@ -602,6 +622,7 @@ def process(
     selector=None,
     count=None,
     command_code=None,
+    parameter_encryption=None,
     array_size_constraint=None,
     size_constraints=None,
     abort_on_error=True,
@@ -667,6 +688,7 @@ def process(
         result = yield from process_tpms(
             tpm_type,
             path,
+            parameter_encryption=parameter_encryption,
             size_constraints=size_constraints,
             abort_on_error=abort_on_error,
         )
