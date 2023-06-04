@@ -472,7 +472,10 @@ def process_command(path, abort_on_error=True):
             )
             size += element_size
         except SizeConstraintExceededError as error:
-            if abort_on_error or error.constraint != command_size_constraint:
+            if abort_on_error or error.constraint not in (
+                command_size_constraint,
+                authorization_area_constraint,
+            ):
                 raise error
             yield WarningEvent(error=error)
             return values["commandSize"], tpm_type(**values)
@@ -574,7 +577,10 @@ def process_response(path, command_code, abort_on_error=True):
             )
             size += element_size
         except SizeConstraintExceededError as error:
-            if abort_on_error or error.constraint != response_size_constraint:
+            if abort_on_error or error.constraint not in (
+                response_size_constraint,
+                parameter_size_constraint,
+            ):
                 raise error
             yield WarningEvent(error=error)
             return values["responseSize"], tpm_type(**values)
