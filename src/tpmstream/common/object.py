@@ -27,7 +27,7 @@ def separate_events(events):
 
 def events_to_objs(events: list[Event]):
     """Takes iterable of events and yields python objects of type tpm_type."""
-    events_single_cmd_rsp = separate_events(events)
+    events_single_cmd_rsp = list(separate_events(events))
 
     command_code = None
     for events in events_single_cmd_rsp:
@@ -175,6 +175,16 @@ def obj_to_events(obj, path=None) -> list[MarshalEvent]:
     # for all fields in dataclass
     for field in obj_fields:
         if getattr(obj, field.name) is None:
+            if type(obj).__name__.startswith("TPMU") or field.name in (
+                "authSize",
+                "authorizationArea",
+                "parameterSize",
+                "parameters",
+            ):
+                # skip field completely (invisible)
+                continue
+            # otherwise: yield "empty field"
+            yield MarshalEvent(path / PathNode(field.name), field.type, ...)
             continue
 
         if is_list(field.type):

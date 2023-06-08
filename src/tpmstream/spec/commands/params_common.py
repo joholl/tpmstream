@@ -20,7 +20,13 @@ class TPMS_PARAMS:
         """Returns a modified type where first parameter type is TPM2B_ENCRYPTED_PARAM. Result is cached to enable equality checks on it."""
         new_type = type(cls.__name__, (), {})
 
+        assert hasattr(
+            cls, "__annotations__"
+        ), f"Parameter encryption failed: {cls.__name__} does not seem to have any parameters"
         params = cls.__annotations__
+        assert list(params.values())[0].__name__.startswith(
+            "TPM2B"
+        ), f"Parameter encryption failed: expected TPM2B type for first param of {cls.__name__}, but found {list(params.values())[0].__name__} {list(params.keys())[0]}"
         first_param = {list(params.keys())[0]: TPM2B_ENCRYPTED_PARAM}
         other_params = dict(list(params.items())[1:])
 

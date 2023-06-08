@@ -17,6 +17,7 @@ from ...spec.commands import Command, CommandResponseStream, Response
 from ...spec.commands.params_common import TPMS_PARAMS
 from ...spec.common.values import ValidValues
 from ...spec.structures.constants import TPM_CC, TPM_RC, TPM_ST
+from ...spec.structures.structures import TPMS_AUTH_COMMAND
 
 
 def consume_bytes(count):
@@ -24,13 +25,44 @@ def consume_bytes(count):
         _ = yield
 
 
-def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=True):
+def is_parameter_encryption(
+    command: Command = None,
+    authorizationArea: TPMS_AUTH_COMMAND = None,
+    for_response=False,
+) -> bool:
+    """Return if we have to do parameter encryption for command (or response if for_response=True)."""
+    assert command is None or authorizationArea is None
+    if command is not None:
+        if command.authorizationArea is None:
+            return False
+        authorizationArea = command.authorizationArea
+    if for_response:
+        return any(
+            authorizationArea.sessionAttributes.encrypt
+            for authorizationArea in authorizationArea
+        )
+    else:
+        return any(
+            authorizationArea.sessionAttributes.decrypt
+            for authorizationArea in authorizationArea
+        )
+
+
+def marshal(
+    tpm_type,
+    buffer,
+    root_path=None,
+    command_code=None,
+    parameter_encryption=None,
+    abort_on_error=True,
+):
     """
     Generator.
     Takes iterable "buffer" as a parameter which yields single bytes.
     Yields Events.
     Return (command_code, remaining_bytes)
-    command_code is an int or None.
+    command_code is an int (for Responses) or None.
+    parameter_encryption is True for Responses for which we expect param encryption (sessionAttributes.encrypt) or None
     remaining_bytes is a generator or None if depleted.
 
     Internally:
@@ -52,6 +84,7 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
         tpm_type,
         path=root_path,
         command_code=command_code,
+        parameter_encryption=parameter_encryption,
         abort_on_error=abort_on_error,
     )
     buffer_iter = iter(buffer)
@@ -77,6 +110,7 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
         # this is to know ahead of time, if the buffer is depleted
         try:
             byte = next(buffer_iter)
+            # print(f"{byte:02x} ", end="")
         except StopIteration:
             buffer_depleted = True
 
@@ -89,7 +123,8 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
                 if buffer_depleted and event.path == Path.from_string("."):
                     # root path of new command/response although bytes are depleted
                     # (occurs for CommandResponseStream), do not yield event and end parsing
-                    return command_code, None
+                    # TODO what to return here? (formerly: command_code, None)
+                    return
 
             # yield event from when we sent the byte or last iteration...
             yield event
@@ -98,6 +133,7 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
             try:
                 event = processor.send(None)
             except StopIteration as error:
+                size, obj = error.value
                 if not buffer_depleted:
                     # we already got next byte, so processor should not be done
 
@@ -110,11 +146,11 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, abort_on_error=
                         raise error
                     else:
                         yield WarningEvent(error=error)
-                        return
+                        return obj
 
                 else:
                     # all bytes were depleted
-                    return command_code, None
+                    return obj
             except ConstraintViolatedError as error:
                 bytes_remaining = bytes(itertools.chain((byte,), buffer_iter))
                 error.set_bytes_remaining(bytes_remaining)
@@ -327,6 +363,7 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
 
     # buffer represents single complex type, count is number of bytes
     if buffer_size_exp == 0:
+        values[buffer_field.name] = None
         none = yield MarshalEvent(
             path / PathNode(buffer_field.name), buffer_field.type, ...
         )
@@ -334,7 +371,7 @@ def process_tpm2b(tpm_type, path, size_constraints=None, abort_on_error=True):
         yield from tpm2b_size_constraint.assert_done(
             all_size_constraints=size_constraints, abort_on_error=abort_on_error
         )
-        return size_size, None
+        return size_size, tpm_type(**values)
 
     try:
         buffer_size, buffer_value = yield from process(
@@ -408,7 +445,7 @@ def process_tpmu(tpm_type, path, selector, size_constraints=None, abort_on_error
             abort_on_error=abort_on_error,
         )
 
-    return size, value
+    return size, tpm_type(**{selectee_name: value})
 
 
 def process_command(path, abort_on_error=True):
@@ -498,10 +535,8 @@ def process_command(path, abort_on_error=True):
             )
             size_constraints.append(authorization_area_constraint)
         if field.name == "authorizationArea":
-            parameter_encryption = any(
-                authorizationArea.sessionAttributes.encrypt
-                or authorizationArea.sessionAttributes.decrypt
-                for authorizationArea in element_value
+            parameter_encryption = (
+                is_parameter_encryption(authorizationArea=element_value) or None
             )
 
         values[field.name] = element_value
@@ -516,7 +551,9 @@ def process_command(path, abort_on_error=True):
     return size, tpm_type(**values)
 
 
-def process_response(path, command_code, abort_on_error=True):
+def process_response(
+    path, command_code, parameter_encryption=None, abort_on_error=True
+):
     """Coroutine. Send in one byte if it yields None. Send in None if it yields an MarshalEvents."""
     tpm_type = Response
     response_size_constraint = SizeConstraint()
@@ -571,6 +608,7 @@ def process_response(path, command_code, abort_on_error=True):
             element_size, element_value = yield from process(
                 field_type,
                 element_path,
+                parameter_encryption=parameter_encryption,
                 array_size_constraint=array_size_constraint,
                 size_constraints=size_constraints,
                 abort_on_error=abort_on_error,
@@ -605,17 +643,26 @@ def process_response(path, command_code, abort_on_error=True):
                 abort_on_error=abort_on_error,
             )
             size_constraints.append(parameter_size_constraint)
+        if field.name == "authorizationArea":
+            parameter_encryption_expected = (
+                is_parameter_encryption(
+                    authorizationArea=element_value, for_response=True
+                )
+                or None
+            )
+            # TODO yield Warning
+            assert (
+                parameter_encryption == parameter_encryption_expected
+            ), f"Started parsing Response with parameter_encryption = {parameter_encryption}, but authorizationArea.sessionAttributes.encrypt = {parameter_encryption_expected}."
 
         values[field.name] = element_value
 
     yield from response_size_constraint.assert_done(
         all_size_constraints=size_constraints, abort_on_error=abort_on_error
     )
-    return values["responseSize"], tpm_type(**values)
-
     # as a sanity check - all size_constraints should be handled explicitly by now
     size_constraints.assert_done()
-    return size, tpm_type(**values)
+    return values["responseSize"], tpm_type(**values)
 
 
 def process_command_response_stream(path, abort_on_error=True):
@@ -629,6 +676,8 @@ def process_command_response_stream(path, abort_on_error=True):
             Response,
             path,
             command_code=command.commandCode,
+            parameter_encryption=is_parameter_encryption(command, for_response=True)
+            or None,
             abort_on_error=abort_on_error,
         )
 
@@ -656,7 +705,10 @@ def process(
         result = yield from process_command(path, abort_on_error=abort_on_error)
     elif tpm_type is Response:
         result = yield from process_response(
-            path, command_code=command_code, abort_on_error=abort_on_error
+            path,
+            command_code=command_code,
+            parameter_encryption=parameter_encryption,
+            abort_on_error=abort_on_error,
         )
     elif hasattr(tpm_type, "_int_size"):
         # Primitives, TPMA

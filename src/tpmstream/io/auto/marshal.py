@@ -40,20 +40,21 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, **kwargs):
     format = next(format_buffer_iter)
 
     if format == "pcapng":
-        yield from Pcapng.marshal(
+        result = yield from Pcapng.marshal(
             tpm_type=tpm_type,
             buffer=format_buffer_iter,
             root_path=root_path,
             command_code=command_code,
             **kwargs,
         )
-    elif format == "binary":
-        yield from Binary.marshal(
+        return result
+    if format == "binary":
+        result = yield from Binary.marshal(
             tpm_type=tpm_type,
             buffer=format_buffer_iter,
             root_path=root_path,
             command_code=command_code,
             **kwargs,
         )
-    else:
-        raise RuntimeError(f"Unknown input format: {format}")
+        return result
+    raise RuntimeError(f"Unknown input format: {format}")

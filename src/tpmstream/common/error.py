@@ -37,7 +37,7 @@ class ConstraintViolatedError(Exception):
 class ValueConstraintViolatedError(ConstraintViolatedError):
     def __init__(self, constraint, value, **kwargs):
         super().__init__(
-            f"Parsed bad value for {constraint.tpm_type.__name__} {constraint.constraint_path} = 0x{value:x} = {value} not in {constraint.valid_values}",
+            f"Parsed bad value for {constraint.tpm_type.__name__} {constraint.constraint_path} = 0x{int(value):x} = {int(value)} not in {constraint.valid_values}",
             **kwargs,
         )
         self.constraint = constraint
