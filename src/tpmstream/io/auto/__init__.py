@@ -5,9 +5,10 @@ from .marshal import marshal
 class Auto:
     @staticmethod
     def marshal(tpm_type, buffer, root_path=None, command_code=None, **kwargs):
-        yield from marshal(
+        result = yield from marshal(
             tpm_type, buffer, root_path=root_path, command_code=command_code, **kwargs
         )
+        return result
 
     @staticmethod
     def unmarshal(events: list[MarshalEvent]):

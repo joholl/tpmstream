@@ -1,11 +1,20 @@
 from functools import cached_property
-from types import GeneratorType
 
-from tpmstream.common.object import events_to_obj, obj_to_events
+from tpmstream.common.object import obj_to_events
 from tpmstream.io.auto import Auto
 from tpmstream.io.pretty import Pretty
 from tpmstream.spec.commands import command_response_types
 from tpmstream.spec.structures import structures_types
+
+
+class Generator:
+    """Class for getting the return value of a generator."""
+
+    def __init__(self, gen):
+        self.gen = gen
+
+    def __iter__(self):
+        self.value = yield from self.gen
 
 
 class Canonical:
@@ -19,21 +28,27 @@ class Canonical:
         abort_on_error=True,
     ):
         if any(isinstance(input, t) for t in structures_types + command_response_types):
-            events = obj_to_events(input, path=path)
+            # input is an object of a tpm_type
+            self._object = input
+            self._events = Generator(obj_to_events(input, path=path))
         elif isinstance(input, bytes):
-            events = Auto.marshal(
-                tpm_type=tpm_type,
-                buffer=input,
-                root_path=path,
-                command_code=command_code,
-                abort_on_error=abort_on_error,
+            # input is bytes buffer
+            self._object = None
+            self._events = Generator(
+                Auto.marshal(
+                    tpm_type=tpm_type,
+                    buffer=input,
+                    root_path=path,
+                    command_code=command_code,
+                    abort_on_error=abort_on_error,
+                )
             )
-        elif hasattr(input, "__iter__"):
-            events = iter(input)
+        # elif hasattr(input, "__iter__"):
+        #     # input is iterable
+        #     events = Generator(iter(input))
         else:
             raise ValueError(f"Unknown input type: {input}")
 
-        self._events = events
         if not lazy:
             self.events  # resolve
 
@@ -46,8 +61,11 @@ class Canonical:
 
     @cached_property
     def events(self):
-        if isinstance(self._events, GeneratorType):
-            self._events = list(self._events)
+        if isinstance(self._events, Generator):
+            events_list = list(self._events)
+            if self._object is None:
+                self._object = self._events.value
+            self._events = events_list
         return self._events
 
     def __iter__(self):
@@ -55,4 +73,7 @@ class Canonical:
 
     @cached_property
     def object(self):
-        return events_to_obj(self.events)
+        if self._object is None:
+            self.events  # resolve
+            assert self._object is not None
+        return self._object
