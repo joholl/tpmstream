@@ -176,6 +176,7 @@ def obj_to_events(obj, path=None) -> list[MarshalEvent]:
     for field in obj_fields:
         if getattr(obj, field.name) is None:
             if type(obj).__name__.startswith("TPMU") or field.name in (
+                "handles",
                 "authSize",
                 "authorizationArea",
                 "parameterSize",
