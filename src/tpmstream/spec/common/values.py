@@ -98,83 +98,93 @@ def _is_public_non_funtion_attr(name: str, attr: any) -> list[tuple[str, any]]:
     return not inspect.isroutine(attr) and not name.startswith("_")
 
 
-def tpm_bitfield(cls):
-    """"""
-    # class IterableMeta(type):
-    #     def __iter__(self):
-    #         return self.attributes()
-    # cls = IterableMeta(cls.__name__, cls.__bases__, dict(cls.__dict__))
+def tpm_bitfield(replace_format=True):
+    def decorator(cls):
+        """"""
+        # class IterableMeta(type):
+        #     def __iter__(self):
+        #         return self.attributes()
+        # cls = IterableMeta(cls.__name__, cls.__bases__, dict(cls.__dict__))
 
-    @classmethod
-    def attributes(cls):
-        """Iterator for all public non-function attributes."""
-        maks_generator = (
-            attr
-            for name, attr in inspect.getmembers(cls)
-            if _is_public_non_funtion_attr(name, attr)
-        )
-        return sorted(maks_generator, key=lambda mask: mask._value)
+        def attributes(self):
+            """Iterator for all public non-function attributes."""
+            maks_generator = (
+                attr
+                for name, attr in inspect.getmembers(type(self))
+                if _is_public_non_funtion_attr(name, attr)
+            )
+            return sorted(maks_generator, key=lambda mask: mask._value)
 
-    setattr(cls, "attributes", attributes)
+        if not hasattr(cls, "attributes"):
+            setattr(cls, "attributes", attributes)
 
-    # add __init__ function (similar to the __init__ function of IntEnum)
-    def __init__(self, value, name=None):
-        if name is not None:
-            # single mask (class attribute)
-            self._name = name
-            self._value = value
-        else:
-            # runtime instance (usually multiple masks combined)
-            self._name = None
-            self._value = value
-
-    setattr(cls, "__init__", __init__)
-
-    def __format__(self, _format_spec=None):
-        if self._name is not None:
-            # pure bit (class attribute)
-            return f"{type(self).__name__}.{self._name}({self._value})"
-        return " | ".join(f"{b}" for b in cls.attributes() if getattr(self, b._name))
-
-    setattr(cls, "__format__", lambda *args: args[0]._value.__format__(*args[1:]))
-    setattr(cls, "__str__", __format__)
-    setattr(cls, "__repr__", __format__)
-
-    # TODO delegate functions to value (__getattribute__?)
-    # def __getattr__(self, name):
-    #     return getattr(self._value, name)
-    # attrs["__getattr__"] = __getattr__
-
-    # TODO implement int operators, e.g. +, |
-
-    # replace attributes with instances of cls, delete those for which filter is falsy
-    for attr_name, attr_value in inspect.getmembers(cls):
-        if not _is_public_non_funtion_attr(attr_name, attr_value):
-            continue
-
-        class Bit:
-            def __init__(self, name, mask):
+        # add __init__ function (similar to the __init__ function of IntEnum)
+        def __init__(self, value, name=None, details=None):
+            if name is not None:
+                # single mask (class attribute)
                 self._name = name
-                self._mask = mask
+                self._value = value
+            else:
+                # runtime instance (usually multiple masks combined)
+                self._name = None
+                self._value = value
+            self._details = details
 
-            def __get__(self, obj, objtype=None):
-                if obj is None:
-                    # called on class
-                    bits = self._mask
-                else:
-                    # called on instance
-                    bits = obj._value & self._mask
-                    mask = self._mask
-                    while mask & 0x1 == 0x0:
-                        bits >>= 1
-                        mask >>= 1
-                    return bits  # TODO ?
+        setattr(cls, "__init__", __init__)
 
-                return cls(value=bits, name=self._name)
+        def __format__(self, _format_spec=None):
+            if self._name is not None:
+                # pure bit (class attribute)
+                return f"{type(self).__name__}.{self._name}"
 
-        setattr(cls, attr_name, Bit(name=attr_name, mask=attr_value))
+            return " | ".join(
+                f"{b}" for b in self.attributes() if getattr(self, b._name)
+            )
 
-    return cls
+        if replace_format:
+            setattr(
+                cls, "__format__", __format__
+            )  # lambda self, *args: self._value.__format__(*args))
+            setattr(cls, "__str__", __format__)
+            setattr(cls, "__repr__", __format__)
+
+        # TODO delegate functions to value (__getattribute__?)
+        # def __getattr__(self, name):
+        #     return getattr(self._value, name)
+        # attrs["__getattr__"] = __getattr__
+
+        # TODO implement int operators, e.g. +, |
+
+        # replace attributes with instances of cls, delete those for which filter is falsy
+        for attr_name, attr_value in inspect.getmembers(cls):
+            if not _is_public_non_funtion_attr(attr_name, attr_value):
+                continue
+
+            class Bit:
+                def __init__(self, name, mask):
+                    self._name = name
+                    self._mask = mask
+
+                def __get__(self, obj, objtype=None):
+                    if obj is None:
+                        # called on class
+                        bits = self._mask
+                    else:
+                        # called on instance
+                        bits = obj._value & self._mask
+                        mask = self._mask
+                        while mask & 0x1 == 0x0:
+                            bits >>= 1
+                            mask >>= 1
+                        return bits  # TODO ?
+
+                    return cls(value=bits, name=self._name)
+
+            setattr(cls, attr_name, Bit(name=attr_name, mask=attr_value))
+
+        return cls
+
+    return decorator
 
 
 def tpm_enum(*args, filter=None):

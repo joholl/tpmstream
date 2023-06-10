@@ -201,9 +201,11 @@ def pretty_attrs(event: MarshalEvent):
 
         bit_size = size * 8
         mask_padded = f"{mask:b}".zfill(bit_size)
-        value_padded = f"{event.value:b}".zfill(bit_size)
+        value_padded = f"{event.value._value:b}".zfill(bit_size)
         bits = "".join(
             "." if m == "0" else v for m, v in zip(mask_padded, value_padded)
         )
+        if attribute._details:
+            bits = f"{bits}  {attribute._details}"
 
         yield format(None, path, None, bits)

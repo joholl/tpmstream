@@ -2,7 +2,7 @@ from ..common.values import tpm_bitfield
 from .base_types import UINT8, UINT32
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_ALGORITHM(UINT32):
     asymmetric = 0x00000001
     symmetric = 0x00000002
@@ -15,7 +15,7 @@ class TPMA_ALGORITHM(UINT32):
     reserved1 = 0xFFFFF800
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_OBJECT(UINT32):
     reserved = 0x00000001
     fixedTPM = 0x00000002
@@ -36,7 +36,7 @@ class TPMA_OBJECT(UINT32):
     reserved3 = 0xFFF00000
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_SESSION(UINT8):
     continueSession = 0x01
     auditExclusive = 0x02
@@ -47,7 +47,7 @@ class TPMA_SESSION(UINT8):
     audit = 0x80
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_LOCALITY(UINT8):
     TPM_LOC_ZERO = 0x01
     TPM_LOC_ONE = 0x02
@@ -57,7 +57,7 @@ class TPMA_LOCALITY(UINT8):
     extended = 0x60
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_PERMANENT(UINT32):
     ownerAuthSet = 0x00000001
     endorsementAuthSet = 0x00000002
@@ -69,7 +69,7 @@ class TPMA_PERMANENT(UINT32):
     reserved1 = 0xFFFFF800
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_STARTUP_CLEAR(UINT32):
     phEnable = 0x00000001
     shEnable = 0x00000002
@@ -79,7 +79,7 @@ class TPMA_STARTUP_CLEAR(UINT32):
     orderly = 0x80000000
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_MEMORY(UINT32):
     sharedRAM = 0x00000001
     sharedNV = 0x00000002
@@ -87,7 +87,7 @@ class TPMA_MEMORY(UINT32):
     reserved = 0xFFFFFFF8
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_CC(UINT32):
     commandIndex = 0x0000FFFF
     reserved0 = 0x003F0000
@@ -100,13 +100,13 @@ class TPMA_CC(UINT32):
     reserved1 = 0xC0000000
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_MODES(UINT32):
     FIPS_140_2 = 0x00000001
     reserved = 0xFFFFFFFE
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_X509_KEY_USAGE(UINT32):
     reserved = 0x007FFFFF
     decipherOnly = 0x00800000
@@ -120,7 +120,7 @@ class TPMA_X509_KEY_USAGE(UINT32):
     digitalSignature = 0x80000000
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_ACT(UINT32):
     signaled = 0x00000001
     preserveSignaled = 0x00000002

@@ -1,6 +1,7 @@
 from enum import IntEnum, auto
 
 from ..common.base_type import numeric
+from ..common.tpm_rc import TPM_RC
 from ..common.values import tpm_enum
 from .base_types import INT8, UINT8, UINT16, UINT32
 
@@ -243,9 +244,8 @@ class TPM_CC(UINT32):
     ACT_SetTimeout = 0x00000198
 
 
-@tpm_enum
-class TPM_RC(UINT32):
-    SUCCESS = 0x00000000  # TODO
+# TPM_RC is a combination of bitfield and enum and outsourced due to the required special handling
+TPM_RC = TPM_RC
 
 
 @tpm_enum
