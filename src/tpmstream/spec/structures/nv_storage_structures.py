@@ -21,7 +21,7 @@ class TPMS_NV_PIN_COUNTER_PARAMETERS:
     pinLimit: UINT32
 
 
-@tpm_bitfield
+@tpm_bitfield()
 class TPMA_NV(UINT32):
     PPWRITE = 0x00000001
     OWNERWRITE = 0x00000002

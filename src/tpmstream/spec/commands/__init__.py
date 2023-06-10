@@ -63,8 +63,8 @@ class Response:
     tag: TPM_ST
     responseSize: UINT32
     responseCode: TPM_RC
+    # handles, parameterSize, parameters and authorizationArea are not present if responseCode is fail
     handles: Any
-    # parameterSize, parameters and authorizationArea are not present if responseCode is fail
     parameterSize: UINT32
     parameters: Any
     authorizationArea: list[TPMS_AUTH_RESPONSE]
