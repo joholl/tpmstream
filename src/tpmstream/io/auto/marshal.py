@@ -2,6 +2,7 @@ import binascii
 
 from ...spec.structures.interface_types import TPMI_ST_COMMAND_TAG
 from ..binary import Binary
+from ..hex import Hex
 from ..pcapng import Pcapng
 
 
@@ -20,6 +21,8 @@ def detect_format_and_yield_buffer(buffer):
     if look_ahead == b"\x0a\x0d":
         # TODO use enum or some sort of canonical mapping?
         yield "pcapng"
+    elif look_ahead == b"80":
+        yield "hex"
     elif look_ahead in (
         tag.to_bytes() for tag in TPMI_ST_COMMAND_TAG._valid_values._values
     ):
@@ -41,6 +44,15 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, **kwargs):
 
     if format == "pcapng":
         result = yield from Pcapng.marshal(
+            tpm_type=tpm_type,
+            buffer=format_buffer_iter,
+            root_path=root_path,
+            command_code=command_code,
+            **kwargs,
+        )
+        return result
+    if format == "hex":
+        result = yield from Hex.marshal(
             tpm_type=tpm_type,
             buffer=format_buffer_iter,
             root_path=root_path,

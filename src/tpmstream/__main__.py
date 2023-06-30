@@ -11,6 +11,7 @@ from .io import bytes_from_files
 from .io.auto import Auto
 from .io.binary import Binary
 from .io.events import Events
+from .io.hex import Hex
 from .io.pcapng import Pcapng
 from .io.pretty import Pretty
 from .spec import all_types
@@ -55,6 +56,7 @@ def convert(args):
     format_in = {
         "auto": Auto,
         "binary": Binary,
+        "hex": Hex,
         "pcapng": Pcapng,
     }[args.format_in]
 
@@ -200,7 +202,7 @@ subparsers.required = True
 format_in_arg = {
     "dest": "format_in",
     "type": str,
-    "choices": ["binary", "pcapng", "auto"],
+    "choices": ["binary", "hex", "pcapng", "auto"],
     "default": "auto",
     "help": "input stream format, default is auto (--in=auto only works with --type=CommandResponseStream)",
 }
