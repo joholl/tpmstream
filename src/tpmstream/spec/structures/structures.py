@@ -416,7 +416,6 @@ class TPMS_NV_DIGEST_CERTIFY_INFO:
     nvDigest: TPM2B_DIGEST
 
 
-@tpm_dataclass
 class TPMI_ST_ATTEST(TPM_ST):
     _valid_values = ValidValues(
         TPM_ST.ATTEST_CERTIFY,
