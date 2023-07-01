@@ -1,4 +1,5 @@
 [![CI](https://github.com/joholl/tpmstream/actions/workflows/test.yml/badge.svg)](https://github.com/joholl/tpmstream/actions/workflows/test.yml)
+[![PyPI version](https://img.shields.io/pypi/v/tpmstream)](https://pypi.org/project/tpmstream)
 
 # tpmstream
 
