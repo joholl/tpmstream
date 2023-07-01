@@ -36,10 +36,11 @@ def marshal(tpm_type, buffer, root_path=None, command_code=None, **kwargs):
     """Generator. Take iterable which yields single bytes. Yield MarshalEvents."""
     parsed_bytes = parse_hex_string(buffer)
 
-    yield from Binary.marshal(
+    result = yield from Binary.marshal(
         tpm_type=tpm_type,
         buffer=parsed_bytes,
         root_path=root_path,
         command_code=command_code,
         **kwargs,
     )
+    return result
