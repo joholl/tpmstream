@@ -120,7 +120,11 @@ def marshal(
             if isinstance(event, MarshalEvent):
                 if event.path == command_code_path:
                     command_code = event.value
-                if buffer_depleted and event.path == Path.from_string("."):
+                if (
+                    buffer_depleted
+                    and event.path == Path.from_string(".")
+                    and event.value is ...
+                ):
                     # root path of new command/response although bytes are depleted
                     # (occurs for CommandResponseStream), do not yield event and end parsing
                     # TODO what to return here? (formerly: command_code, None)

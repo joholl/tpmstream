@@ -4,6 +4,13 @@ from argparse import ArgumentParser, FileType
 from dataclasses import fields
 from difflib import get_close_matches
 
+from tpmstream.common.canonical import Canonical
+from tpmstream.common.error import (
+    ConstraintViolatedError,
+    InputStreamBytesDepletedError,
+    InputStreamSuperfluousBytesError,
+)
+
 from . import __version__
 from .common.object import events_to_objs, obj_to_events
 from .data import example_data_files
@@ -195,6 +202,61 @@ def examples(args):
     return 0
 
 
+def find_type(args):
+    format_in = {
+        "auto": Auto,
+        "binary": Binary,
+        "hex": Hex,
+        "pcapng": Pcapng,
+    }[args.format_in]
+
+    buffer = bytes(bytes_from_files(args.file))
+
+    canonical_objs = parse_all_types(format_in, buffer)
+
+    def tpm_type_to_str(canonical_obj, command_code):
+        if isinstance(canonical_obj.object, Response):
+            return f"Response ({command_code})"
+        return f"{type(canonical_obj.object).__name__}"
+
+    print(
+        "\n".join(
+            tpm_type_to_str(canonical, command_code)
+            for canonical, command_code in canonical_objs
+        )
+    )
+
+
+def parse_all_types(format_in, buffer):
+    for tpm_type in all_types:
+        if tpm_type is CommandResponseStream:
+            continue
+        if tpm_type.__name__.startswith("TPMU"):
+            continue
+
+        command_codes = (None,)
+        if tpm_type is Response:
+            command_codes = TPM_CC
+
+        for command_code in command_codes:
+            try:
+                canonical = Canonical(
+                    input=buffer,
+                    format_in=format_in,
+                    tpm_type=tpm_type,
+                    command_code=command_code,
+                    lazy=False,
+                    abort_on_error=True,
+                )
+                yield canonical, command_code
+            except (
+                InputStreamBytesDepletedError,
+                InputStreamSuperfluousBytesError,
+                ConstraintViolatedError,
+            ) as error:
+                continue
+
+
 parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 subparsers = parser.add_subparsers()
 subparsers.required = True
@@ -244,6 +306,13 @@ parser_example.add_argument(
 )
 # TODO add type_arg
 parser_example.set_defaults(func=examples)
+
+parser_type = subparsers.add_parser("type", aliases=["ty"])
+parser_type.add_argument(
+    "file", type=FileType("rb"), nargs="+", help="input file(s) to be parsed"
+)
+parser_type.add_argument("--in", **format_in_arg)
+parser_type.set_defaults(func=find_type)
 
 # TODO requires eval "$(register-python-argcomplete tpmstream/__main__.py)"
 # TODO what about subparsers?

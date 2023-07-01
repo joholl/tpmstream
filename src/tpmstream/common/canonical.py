@@ -21,6 +21,7 @@ class Canonical:
     def __init__(
         self,
         input,
+        format_in=Auto,
         tpm_type=None,
         path=None,
         command_code=None,
@@ -35,7 +36,7 @@ class Canonical:
             # input is bytes buffer
             self._object = None
             self._events = Generator(
-                Auto.marshal(
+                format_in.marshal(
                     tpm_type=tpm_type,
                     buffer=input,
                     root_path=path,
