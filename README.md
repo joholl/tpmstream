@@ -7,7 +7,7 @@ A tool to help you understand TPM commands and responses. You can either use the
 `convert` command if you want to decode TPM commands/responses or the `example`
 command to find examples.
 
-Try it online at [joholl.github.io/tpmstream-web](joholl.github.io/tpmstream-web)!
+Try it online at [joholl.github.io/tpmstream-web](https://joholl.github.io/tpmstream-web)!
 
 ## Install
 
