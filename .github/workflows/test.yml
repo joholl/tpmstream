@@ -10,7 +10,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt install -y libpcap-dev libtss2-dev
 
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - uses: syphar/restore-virtualenv@v1
         id: cache-virtualenv
@@ -23,8 +25,10 @@ jobs:
 
         # the package installation will only be executed when the
         # requirements-files have changed.
-      - run: pip install .; pip install pytest autoflake black isort tpm2_pytss
+      - run: pip install --upgrade pip && pip install . && pip install pytest autoflake black isort cryptography==3.4.8 tpm2_pytss
         #if: steps.cache-virtualenv.outputs.cache-hit != 'true'
+
+      - run: pip freeze
 
       - name: Test
         run: python -m pytest
@@ -39,7 +43,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt install -y libpcap-dev bats
 
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - uses: syphar/restore-virtualenv@v1
         id: cache-virtualenv
@@ -66,7 +72,9 @@ jobs:
       - name: Install dependencies
         run: sudo apt install -y libpcap-dev
 
-      - uses: actions/setup-python@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - uses: syphar/restore-virtualenv@v1
         id: cache-virtualenv
