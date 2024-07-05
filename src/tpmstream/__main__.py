@@ -21,6 +21,7 @@ from .io.events import Events
 from .io.hex import Hex
 from .io.pcapng import Pcapng
 from .io.pretty import Pretty
+from .io.swtpm_log import SWTPMLog
 from .spec import all_types
 from .spec.commands import CommandResponseStream, Response
 
@@ -65,6 +66,7 @@ def convert(args):
         "binary": Binary,
         "hex": Hex,
         "pcapng": Pcapng,
+        "swtpm-log": SWTPMLog,
     }[args.format_in]
 
     format_out = {
@@ -208,6 +210,7 @@ def find_type(args):
         "binary": Binary,
         "hex": Hex,
         "pcapng": Pcapng,
+        "swtpm-log": SWTPMLog,
     }[args.format_in]
 
     buffer = bytes(bytes_from_files(args.file))
@@ -264,7 +267,7 @@ subparsers.required = True
 format_in_arg = {
     "dest": "format_in",
     "type": str,
-    "choices": ["binary", "hex", "pcapng", "auto"],
+    "choices": ["binary", "hex", "pcapng", "swtpm-log" ,"auto"],
     "default": "auto",
     "help": "input stream format, default is auto (--in=auto only works with --type=CommandResponseStream)",
 }
