@@ -4,11 +4,12 @@ on: [push]
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    container: ubuntu:24.04
     steps:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: sudo apt install -y libpcap-dev libtss2-dev
+        run: apt update && apt install -y libpcap-dev libtss2-dev gcc
 
       - uses: actions/setup-python@v5
         with:
@@ -35,13 +36,15 @@ jobs:
 
   bats:
     runs-on: ubuntu-latest
+    container: ubuntu:24.04
     steps:
+      - run: apt update && apt install -y git
       - uses: actions/checkout@v3
         with:
           submodules: 'true'
 
       - name: Install dependencies
-        run: sudo apt install -y libpcap-dev bats
+        run: apt update && apt install -y libpcap-dev libtss2-dev gcc bats xxd
 
       - uses: actions/setup-python@v5
         with:
@@ -66,11 +69,12 @@ jobs:
 
   linters:
     runs-on: ubuntu-latest
+    container: ubuntu:24.04
     steps:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: sudo apt install -y libpcap-dev
+        run: apt update && apt install -y libpcap-dev libtss2-dev gcc
 
       - uses: actions/setup-python@v5
         with:
