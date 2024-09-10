@@ -11,8 +11,10 @@ from tpmstream.common.canonical import Canonical, Generator
 from tpmstream.common.error import ConstraintViolatedError
 from tpmstream.common.object import events_to_obj, obj_to_events
 from tpmstream.data import example_data_files
+from tpmstream.io import bytes_from_files
 from tpmstream.io.binary import Binary
-from tpmstream.spec.commands import Command, Response, command_handle_types
+from tpmstream.io.swtpm_log import SWTPMLog
+from tpmstream.spec.commands import CommandResponseStream, Command, Response, command_handle_types
 from tpmstream.spec.structures.attribute_structures import TPMA_SESSION
 from tpmstream.spec.structures.constants import TPM_CC
 
@@ -279,6 +281,19 @@ class TestBinary:
         assert (
             binary_blob == bin_from_events
         ), f"assert {binascii.hexlify(binary_blob)} == {binascii.hexlify(bin_from_events)}"
+
+
+class TestSWTPMLogs:
+
+    @pytest.mark.parametrize(
+        "log_name",
+        [ "fedora38", "win11" ]
+    )
+    def test_marshalling(self, log_name):
+        log_file = os.path.join("test", "swtpm", log_name + "-swtpm.log")
+        with open(log_file, "rb") as log:
+            log = bytes_from_files(log)
+            SWTPMLog.marshal(CommandResponseStream, log, abort_on_error=True)
 
 
 # TODO canonical object from marshal is object from events
