@@ -267,7 +267,7 @@ subparsers.required = True
 format_in_arg = {
     "dest": "format_in",
     "type": str,
-    "choices": ["binary", "hex", "pcapng", "swtpm-log" ,"auto"],
+    "choices": ["binary", "hex", "pcapng", "swtpm-log", "auto"],
     "default": "auto",
     "help": "input stream format, default is auto (--in=auto only works with --type=CommandResponseStream)",
 }

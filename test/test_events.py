@@ -14,7 +14,12 @@ from tpmstream.data import example_data_files
 from tpmstream.io import bytes_from_files
 from tpmstream.io.binary import Binary
 from tpmstream.io.swtpm_log import SWTPMLog
-from tpmstream.spec.commands import CommandResponseStream, Command, Response, command_handle_types
+from tpmstream.spec.commands import (
+    Command,
+    CommandResponseStream,
+    Response,
+    command_handle_types,
+)
 from tpmstream.spec.structures.attribute_structures import TPMA_SESSION
 from tpmstream.spec.structures.constants import TPM_CC
 
@@ -285,10 +290,7 @@ class TestBinary:
 
 class TestSWTPMLogs:
 
-    @pytest.mark.parametrize(
-        "log_name",
-        [ "fedora38", "win11" ]
-    )
+    @pytest.mark.parametrize("log_name", ["fedora38", "win11"])
     def test_marshalling(self, log_name):
         log_file = os.path.join("test", "swtpm", log_name + "-swtpm.log")
         with open(log_file, "rb") as log:

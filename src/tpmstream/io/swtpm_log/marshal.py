@@ -6,10 +6,10 @@ CTRL_MARKER = b"Ctrl"
 VALID_HEX = b"0123456789ABCDEF"
 VALID_WS = b" \r\n"
 
-STATE_WANT_CMD_MARKER  = 0
-STATE_WANT_CMD_START   = 1
+STATE_WANT_CMD_MARKER = 0
+STATE_WANT_CMD_START = 1
 STATE_WANT_HIGH_NIBBLE = 2
-STATE_WANT_LOW_NIBBLE  = 3
+STATE_WANT_LOW_NIBBLE = 3
 
 # File format we're parsing looks like this:
 #
@@ -44,6 +44,7 @@ STATE_WANT_LOW_NIBBLE  = 3
 # TPM commands and responses respectively, where we
 # capture the following data and convert to binary.
 
+
 def parse_hex_string(buffer):
     """Generator: hex string to bytes."""
     buffer = iter(buffer)
@@ -63,7 +64,7 @@ def parse_hex_string(buffer):
                 if len(marker) != 0:
                     raise ValueError("Incomplete command marker '%s'" % str(marker))
                 return
-            elif b == CMD_MARKER[len(marker):len(marker)+1]:
+            elif b == CMD_MARKER[len(marker) : len(marker) + 1]:
                 marker += b
 
                 if marker == CMD_MARKER:
@@ -75,11 +76,11 @@ def parse_hex_string(buffer):
         elif state == STATE_WANT_CMD_START:
             if b is None:
                 raise ValueError("Missing command payload")
-            elif b == b'\n':
+            elif b == b"\n":
                 state = STATE_WANT_HIGH_NIBBLE
             else:
                 continue
-        elif state  == STATE_WANT_HIGH_NIBBLE:
+        elif state == STATE_WANT_HIGH_NIBBLE:
             if b is None:
                 return
             elif b in VALID_WS:
